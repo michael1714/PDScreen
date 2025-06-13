@@ -20,6 +20,7 @@ import {
 } from '@mui/material';
 import DownloadIcon from '@mui/icons-material/Download';
 import DeleteIcon from '@mui/icons-material/Delete';
+import Slider from '@mui/material/Slider';
 
 interface PositionDescription {
     id: number;
@@ -38,6 +39,8 @@ const PositionDescriptionList: React.FC = () => {
     const [tabIndex, setTabIndex] = useState(0);
     const [fileUrl, setFileUrl] = useState<string | null>(null);
     const [fileLoading, setFileLoading] = useState(false);
+    const [responsibilities, setResponsibilities] = useState<any[]>([]);
+    const [respLoading, setRespLoading] = useState(false);
 
     const fetchDescriptions = async () => {
         try {
@@ -122,6 +125,29 @@ const PositionDescriptionList: React.FC = () => {
     const handleTabChange = (_: React.SyntheticEvent, newValue: number) => {
         setTabIndex(newValue);
     };
+
+    useEffect(() => {
+        if (dialogOpen && tabIndex === 1 && selectedDescription) {
+            setRespLoading(true);
+            fetch(`http://localhost:3000/api/upload/${selectedDescription.id}/responsibilities`)
+                .then(res => res.json())
+                .then(data => setResponsibilities(data))
+                .catch(() => setResponsibilities([]))
+                .finally(() => setRespLoading(false));
+        }
+    }, [dialogOpen, tabIndex, selectedDescription]);
+
+    // Handle slider change (UI only)
+    const handleSliderChange = (id: number, newValue: number) => {
+        setResponsibilities((prev) =>
+            prev.map((resp) =>
+                resp.id === id ? { ...resp, responsibility_percentage: newValue } : resp
+            )
+        );
+    };
+
+    // Calculate total percentage
+    const totalPercentage = responsibilities.reduce((sum, r) => sum + Number(r.responsibility_percentage), 0);
 
     if (loading) {
         return (
@@ -236,9 +262,61 @@ const PositionDescriptionList: React.FC = () => {
                     )}
                     {tabIndex === 1 && (
                         <Box sx={{ minHeight: 400, p: 2 }}>
-                            <Typography variant="body1" color="text.secondary">
-                                Responsibilities content will go here.
-                            </Typography>
+                            <Box mb={3} display="flex" justifyContent="flex-end">
+                                <Typography
+                                    variant="h5"
+                                    sx={{
+                                        color: totalPercentage > 100 ? 'error.main' : 'primary.main',
+                                        fontWeight: 700,
+                                        fontSize: '1.5rem',
+                                        textAlign: 'right',
+                                    }}
+                                >
+                                    Total: {Math.round(totalPercentage)}%
+                                </Typography>
+                            </Box>
+                            {respLoading ? (
+                                <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
+                                    <CircularProgress />
+                                </Box>
+                            ) : responsibilities.length > 0 ? (
+                                <TableContainer component={Paper}>
+                                    <Table size="small">
+                                        <TableHead>
+                                            <TableRow>
+                                                <TableCell>Responsibility</TableCell>
+                                                <TableCell align="center">Percentage</TableCell>
+                                            </TableRow>
+                                        </TableHead>
+                                        <TableBody>
+                                            {responsibilities.map((resp) => (
+                                                <TableRow key={resp.id}>
+                                                    <TableCell>{resp.responsibility_name}</TableCell>
+                                                    <TableCell align="center">
+                                                        <Box display="flex" alignItems="center" gap={2}>
+                                                            <Slider
+                                                                value={Math.round(resp.responsibility_percentage)}
+                                                                min={0}
+                                                                max={100}
+                                                                step={1}
+                                                                sx={{ width: 120 }}
+                                                                onChange={(_, value) => handleSliderChange(resp.id, value as number)}
+                                                            />
+                                                            <Typography variant="body2" sx={{ minWidth: 40, textAlign: 'right' }}>
+                                                                {Math.round(resp.responsibility_percentage)}%
+                                                            </Typography>
+                                                        </Box>
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
+                                </TableContainer>
+                            ) : (
+                                <Typography variant="body2" color="text.secondary">
+                                    No responsibilities found.
+                                </Typography>
+                            )}
                         </Box>
                     )}
                 </DialogContent>
