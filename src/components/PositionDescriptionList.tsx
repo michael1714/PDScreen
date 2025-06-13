@@ -11,7 +11,12 @@ import {
     Paper,
     IconButton,
     CircularProgress,
-    Alert
+    Alert,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    Tabs,
+    Tab
 } from '@mui/material';
 import DownloadIcon from '@mui/icons-material/Download';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -28,6 +33,11 @@ const PositionDescriptionList: React.FC = () => {
     const [descriptions, setDescriptions] = useState<PositionDescription[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [dialogOpen, setDialogOpen] = useState(false);
+    const [selectedDescription, setSelectedDescription] = useState<PositionDescription | null>(null);
+    const [tabIndex, setTabIndex] = useState(0);
+    const [fileUrl, setFileUrl] = useState<string | null>(null);
+    const [fileLoading, setFileLoading] = useState(false);
 
     const fetchDescriptions = async () => {
         try {
@@ -84,6 +94,35 @@ const PositionDescriptionList: React.FC = () => {
         }
     };
 
+    const handleFileNameClick = async (description: PositionDescription) => {
+        setSelectedDescription(description);
+        setDialogOpen(true);
+        setTabIndex(0);
+        setFileUrl(null);
+        setFileLoading(true);
+        // Fetch file blob for preview
+        try {
+            const response = await fetch(`http://localhost:3000/api/upload/${description.id}/download`);
+            if (!response.ok) throw new Error('Failed to fetch file');
+            const blob = await response.blob();
+            setFileUrl(window.URL.createObjectURL(blob));
+        } catch (err) {
+            setFileUrl(null);
+        } finally {
+            setFileLoading(false);
+        }
+    };
+
+    const handleDialogClose = () => {
+        setDialogOpen(false);
+        setSelectedDescription(null);
+        setFileUrl(null);
+    };
+
+    const handleTabChange = (_: React.SyntheticEvent, newValue: number) => {
+        setTabIndex(newValue);
+    };
+
     if (loading) {
         return (
             <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
@@ -108,7 +147,6 @@ const PositionDescriptionList: React.FC = () => {
                 <Table>
                     <TableHead>
                         <TableRow>
-                            {/* <TableCell>Title</TableCell> */}
                             <TableCell>File Name</TableCell>
                             <TableCell>Upload Date</TableCell>
                             <TableCell>Status</TableCell>
@@ -118,9 +156,12 @@ const PositionDescriptionList: React.FC = () => {
                     <TableBody>
                         {descriptions.map((description) => (
                             <TableRow key={description.id}>
-                                {/* <TableCell>{description.title}</TableCell> */}
                                 <TableCell>
-                                    <a href="#" style={{ textDecoration: 'underline', color: '#1976d2' }}>
+                                    <a
+                                        href="#"
+                                        style={{ textDecoration: 'underline', color: '#1976d2', cursor: 'pointer' }}
+                                        onClick={e => { e.preventDefault(); handleFileNameClick(description); }}
+                                    >
                                         {description.title}
                                     </a>
                                 </TableCell>
@@ -154,6 +195,54 @@ const PositionDescriptionList: React.FC = () => {
                     </TableBody>
                 </Table>
             </TableContainer>
+
+            {/* Popup Dialog for file preview and responsibilities */}
+            <Dialog open={dialogOpen} onClose={handleDialogClose} maxWidth="md" fullWidth>
+                <DialogTitle>
+                    {selectedDescription?.title}
+                </DialogTitle>
+                <DialogContent>
+                    <Tabs value={tabIndex} onChange={handleTabChange} sx={{ mb: 2 }}>
+                        <Tab label="Preview" />
+                        <Tab label="Responsibilities" />
+                    </Tabs>
+                    {tabIndex === 0 && (
+                        <Box sx={{ minHeight: 400 }}>
+                            {fileLoading ? (
+                                <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
+                                    <CircularProgress />
+                                </Box>
+                            ) : fileUrl ? (
+                                selectedDescription?.file_name.toLowerCase().endsWith('.pdf') ? (
+                                    <iframe
+                                        src={fileUrl}
+                                        title="PDF Preview"
+                                        width="100%"
+                                        height="500px"
+                                        style={{ border: 'none' }}
+                                    />
+                                ) : (
+                                    <Typography variant="body2" color="text.secondary">
+                                        Preview not available for this file type.<br />
+                                        <a href={fileUrl} target="_blank" rel="noopener noreferrer">Download file</a> to view.
+                                    </Typography>
+                                )
+                            ) : (
+                                <Typography variant="body2" color="text.secondary">
+                                    No preview available.
+                                </Typography>
+                            )}
+                        </Box>
+                    )}
+                    {tabIndex === 1 && (
+                        <Box sx={{ minHeight: 400, p: 2 }}>
+                            <Typography variant="body1" color="text.secondary">
+                                Responsibilities content will go here.
+                            </Typography>
+                        </Box>
+                    )}
+                </DialogContent>
+            </Dialog>
         </Box>
     );
 };
