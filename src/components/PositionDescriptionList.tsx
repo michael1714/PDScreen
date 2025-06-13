@@ -108,7 +108,7 @@ const PositionDescriptionList: React.FC = () => {
                 <Table>
                     <TableHead>
                         <TableRow>
-                            <TableCell>Title</TableCell>
+                            {/* <TableCell>Title</TableCell> */}
                             <TableCell>File Name</TableCell>
                             <TableCell>Upload Date</TableCell>
                             <TableCell>Status</TableCell>
@@ -118,8 +118,12 @@ const PositionDescriptionList: React.FC = () => {
                     <TableBody>
                         {descriptions.map((description) => (
                             <TableRow key={description.id}>
-                                <TableCell>{description.title}</TableCell>
-                                <TableCell>{description.file_name}</TableCell>
+                                {/* <TableCell>{description.title}</TableCell> */}
+                                <TableCell>
+                                    <a href="#" style={{ textDecoration: 'underline', color: '#1976d2' }}>
+                                        {description.title}
+                                    </a>
+                                </TableCell>
                                 <TableCell>
                                     {new Date(description.upload_date).toLocaleDateString()}
                                 </TableCell>
@@ -142,7 +146,7 @@ const PositionDescriptionList: React.FC = () => {
                         ))}
                         {descriptions.length === 0 && (
                             <TableRow>
-                                <TableCell colSpan={5} align="center">
+                                <TableCell colSpan={4} align="center">
                                     No position descriptions found
                                 </TableCell>
                             </TableRow>
