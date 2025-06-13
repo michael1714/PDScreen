@@ -1,0 +1,13 @@
+CREATE TABLE IF NOT EXISTS content (
+    id SERIAL PRIMARY KEY,
+    key VARCHAR(50) UNIQUE NOT NULL,
+    value TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Insert initial data
+INSERT INTO content (key, value) 
+VALUES ('greeting', 'Hello World!')
+ON CONFLICT (key) DO UPDATE 
+SET value = EXCLUDED.value; 
