@@ -1,31 +1,36 @@
-import React, { useEffect, useState } from 'react'
-import './App.css'
-import PositionDescriptionUpload from './components/PositionDescriptionUpload'
+import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
+import { AppBar, Toolbar, Typography, Button, Container } from '@mui/material';
+import './App.css';
+import PositionDescriptionUpload from './components/PositionDescriptionUpload';
+import PositionDescriptionList from './components/PositionDescriptionList';
 
 function App() {
-  const [greeting, setGreeting] = useState('Loading...')
-
-  useEffect(() => {
-    const fetchGreeting = async () => {
-      try {
-        const response = await fetch('http://localhost:3000/api/content/greeting')
-        const data = await response.json()
-        setGreeting(data.value)
-      } catch (error) {
-        console.error('Error fetching greeting:', error)
-        setGreeting('Error loading content')
-      }
-    }
-
-    fetchGreeting()
-  }, [])
-
   return (
-    <div className="App">
-      <PositionDescriptionUpload />
-      <h1>{greeting}</h1>
-    </div>
-  )
+    <Router>
+      <div className="App">
+        <AppBar position="static">
+          <Toolbar>
+            <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
+              PD Screen
+            </Typography>
+            <Button color="inherit" component={Link} to="/">
+              Upload
+            </Button>
+            <Button color="inherit" component={Link} to="/list">
+              List
+            </Button>
+          </Toolbar>
+        </AppBar>
+
+        <Container>
+          <Routes>
+            <Route path="/" element={<PositionDescriptionUpload />} />
+            <Route path="/list" element={<PositionDescriptionList />} />
+          </Routes>
+        </Container>
+      </div>
+    </Router>
+  );
 }
 
-export default App 
+export default App; 

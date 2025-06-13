@@ -1,6 +1,7 @@
 import express from 'express';
 import multer from 'multer';
 import path from 'path';
+import fs from 'fs';
 import { pool } from '../db/init';
 
 const router = express.Router();
@@ -64,6 +65,64 @@ router.get('/', async (req, res) => {
     } catch (error) {
         console.error('Error fetching position descriptions:', error);
         res.status(500).json({ error: 'Failed to fetch position descriptions' });
+    }
+});
+
+// Download endpoint
+router.get('/:id/download', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const result = await pool.query(
+            'SELECT file_path, file_name FROM position_descriptions WHERE id = $1',
+            [id]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'File not found' });
+        }
+
+        const { file_path, file_name } = result.rows[0];
+        
+        if (!fs.existsSync(file_path)) {
+            return res.status(404).json({ error: 'File not found on server' });
+        }
+
+        res.download(file_path, file_name);
+    } catch (error) {
+        console.error('Download error:', error);
+        res.status(500).json({ error: 'Failed to download file' });
+    }
+});
+
+// Delete endpoint
+router.delete('/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        // Get file path before deleting
+        const result = await pool.query(
+            'SELECT file_path FROM position_descriptions WHERE id = $1',
+            [id]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'File not found' });
+        }
+
+        const { file_path } = result.rows[0];
+
+        // Delete from database
+        await pool.query('DELETE FROM position_descriptions WHERE id = $1', [id]);
+
+        // Delete file from filesystem
+        if (fs.existsSync(file_path)) {
+            fs.unlinkSync(file_path);
+        }
+
+        res.json({ message: 'File deleted successfully' });
+    } catch (error) {
+        console.error('Delete error:', error);
+        res.status(500).json({ error: 'Failed to delete file' });
     }
 });
 
