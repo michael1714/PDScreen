@@ -18,7 +18,9 @@ import {
     Tabs,
     Tab,
     DialogActions,
-    Button
+    Button,
+    Link,
+    Switch
 } from '@mui/material';
 import DownloadIcon from '@mui/icons-material/Download';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -50,6 +52,9 @@ const PositionDescriptionList: React.FC = () => {
     const [addDialogOpen, setAddDialogOpen] = useState(false);
     const [newRespText, setNewRespText] = useState('');
     const [adding, setAdding] = useState(false);
+    const [removeDialogOpen, setRemoveDialogOpen] = useState(false);
+    const [removingId, setRemovingId] = useState<number | null>(null);
+    const [llmSwitchStates, setLlmSwitchStates] = useState<{ [id: number]: boolean }>({});
 
     const fetchDescriptions = async () => {
         try {
@@ -238,6 +243,33 @@ const PositionDescriptionList: React.FC = () => {
             .finally(() => setRespLoading(false));
     };
 
+    const handleRemoveClick = (id: number) => {
+        setRemovingId(id);
+        setRemoveDialogOpen(true);
+    };
+
+    const handleRemoveConfirm = async () => {
+        if (removingId == null) return;
+        // Remove from backend
+        await fetch(`http://localhost:3000/api/upload/responsibility/${removingId}`, {
+            method: 'DELETE',
+        });
+        // Remove from UI
+        setResponsibilities(responsibilities.filter(r => r.id !== removingId));
+        setOriginalResponsibilities(originalResponsibilities.filter(r => r.id !== removingId));
+        setRemoveDialogOpen(false);
+        setRemovingId(null);
+    };
+
+    const handleRemoveCancel = () => {
+        setRemoveDialogOpen(false);
+        setRemovingId(null);
+    };
+
+    const handleLlmSwitchChange = (id: number) => {
+        setLlmSwitchStates((prev) => ({ ...prev, [id]: !prev[id] }));
+    };
+
     if (loading) {
         return (
             <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
@@ -376,28 +408,42 @@ const PositionDescriptionList: React.FC = () => {
                                     <Table size="small">
                                         <TableHead>
                                             <TableRow>
-                                                <TableCell sx={{ width: '80%' }}>Responsibility</TableCell>
-                                                <TableCell align="center" sx={{ width: '20%' }}>Percentage</TableCell>
+                                                <TableCell style={{ width: '5%' }} />
+                                                <TableCell>Description</TableCell>
+                                                <TableCell style={{ width: '20%' }}>Percentage</TableCell>
                                             </TableRow>
                                         </TableHead>
                                         <TableBody>
                                             {responsibilities.map((resp) => (
                                                 <TableRow key={resp.id}>
-                                                    <TableCell sx={{ width: '80%' }}>{resp.responsibility_name}</TableCell>
-                                                    <TableCell align="center" sx={{ width: '20%' }}>
-                                                        <Box display="flex" alignItems="center" gap={2}>
-                                                            <Slider
-                                                                value={Math.round(resp.responsibility_percentage)}
-                                                                min={0}
-                                                                max={100}
-                                                                step={1}
-                                                                sx={{ width: 120 }}
-                                                                onChange={(_, value) => handleSliderChange(resp.id, value as number)}
+                                                    <TableCell>
+                                                        <Box display="flex" alignItems="center" justifyContent="center" gap={1}>
+                                                            <Switch
+                                                                checked={!!llmSwitchStates[resp.id]}
+                                                                onChange={() => handleLlmSwitchChange(resp.id)}
+                                                                color="success"
+                                                                inputProps={{ 'aria-label': 'LLM wording toggle' }}
+                                                                sx={{ '& .MuiSwitch-thumb': { bgcolor: llmSwitchStates[resp.id] ? 'success.main' : 'grey.300' } }}
                                                             />
-                                                            <Typography variant="body2" sx={{ minWidth: 40, textAlign: 'right' }}>
-                                                                {Math.round(resp.responsibility_percentage)}%
-                                                            </Typography>
+                                                            <Link href="#" color="inherit">
+                                                                <img src="/llm-icon.png" alt="LLM" style={{ width: 32, height: 32 }} />
+                                                            </Link>
+                                                            <Link href="#" color="inherit" onClick={e => { e.preventDefault(); handleRemoveClick(resp.id); }}>
+                                                                <img src="/x-icon.png" alt="X" style={{ width: 32, height: 32 }} />
+                                                            </Link>
                                                         </Box>
+                                                    </TableCell>
+                                                    <TableCell>{llmSwitchStates[resp.id] ? resp.LLM_Desc : resp.responsibility_name}</TableCell>
+                                                    <TableCell>
+                                                        <Slider
+                                                            value={Math.round(resp.responsibility_percentage)}
+                                                            onChange={(_, value) => handleSliderChange(resp.id, value as number)}
+                                                            min={0}
+                                                            max={100}
+                                                            step={1}
+                                                            marks
+                                                            valueLabelDisplay="auto"
+                                                        />
                                                     </TableCell>
                                                 </TableRow>
                                             ))}
@@ -454,6 +500,15 @@ const PositionDescriptionList: React.FC = () => {
                     <Button onClick={handleAddNew} color="primary" disabled={adding || !newRespText.trim()}>
                         {adding ? 'Adding...' : 'Add'}
                     </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Remove Responsibility Dialog */}
+            <Dialog open={removeDialogOpen} onClose={handleRemoveCancel}>
+                <DialogTitle>Are you sure you want to remove this?</DialogTitle>
+                <DialogActions>
+                    <Button onClick={handleRemoveConfirm} color="error">Yes</Button>
+                    <Button onClick={handleRemoveCancel} color="primary">No</Button>
                 </DialogActions>
             </Dialog>
         </Box>
