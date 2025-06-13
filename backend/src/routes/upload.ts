@@ -126,4 +126,51 @@ router.delete('/:id', async (req, res) => {
     }
 });
 
+// Get responsibilities for a PD
+router.get('/:id/responsibilities', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const result = await pool.query(
+            'SELECT id, responsibility_name, responsibility_percentage FROM responsibilities WHERE pd_id = $1 ORDER BY id',
+            [id]
+        );
+        res.json(result.rows);
+    } catch (error) {
+        console.error('Error fetching responsibilities:', error);
+        res.status(500).json({ error: 'Failed to fetch responsibilities' });
+    }
+});
+
+// Update responsibility percentage
+router.put('/responsibility/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { responsibility_percentage } = req.body;
+        await pool.query(
+            'UPDATE responsibilities SET responsibility_percentage = $1 WHERE id = $2',
+            [responsibility_percentage, id]
+        );
+        res.json({ message: 'Responsibility updated successfully' });
+    } catch (error) {
+        console.error('Error updating responsibility:', error);
+        res.status(500).json({ error: 'Failed to update responsibility' });
+    }
+});
+
+// Add new responsibility
+router.post('/:id/responsibilities', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { responsibility_name } = req.body;
+        const result = await pool.query(
+            'INSERT INTO responsibilities (pd_id, responsibility_name, responsibility_percentage) VALUES ($1, $2, 0) RETURNING *',
+            [id, responsibility_name]
+        );
+        res.status(201).json(result.rows[0]);
+    } catch (error) {
+        console.error('Error adding responsibility:', error);
+        res.status(500).json({ error: 'Failed to add responsibility' });
+    }
+});
+
 export default router; 

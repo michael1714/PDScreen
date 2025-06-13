@@ -16,11 +16,15 @@ import {
     DialogTitle,
     DialogContent,
     Tabs,
-    Tab
+    Tab,
+    DialogActions,
+    Button
 } from '@mui/material';
 import DownloadIcon from '@mui/icons-material/Download';
 import DeleteIcon from '@mui/icons-material/Delete';
 import Slider from '@mui/material/Slider';
+import CloseIcon from '@mui/icons-material/Close';
+import TextField from '@mui/material/TextField';
 
 interface PositionDescription {
     id: number;
@@ -41,6 +45,11 @@ const PositionDescriptionList: React.FC = () => {
     const [fileLoading, setFileLoading] = useState(false);
     const [responsibilities, setResponsibilities] = useState<any[]>([]);
     const [respLoading, setRespLoading] = useState(false);
+    const [originalResponsibilities, setOriginalResponsibilities] = useState<any[]>([]);
+    const [showSavePrompt, setShowSavePrompt] = useState(false);
+    const [addDialogOpen, setAddDialogOpen] = useState(false);
+    const [newRespText, setNewRespText] = useState('');
+    const [adding, setAdding] = useState(false);
 
     const fetchDescriptions = async () => {
         try {
@@ -116,7 +125,21 @@ const PositionDescriptionList: React.FC = () => {
         }
     };
 
-    const handleDialogClose = () => {
+    const handleDialogClose = (_event?: object, reason?: string) => {
+        if (reason === 'backdropClick' || reason === 'escapeKeyDown') {
+            return;
+        }
+        if (hasChanges()) {
+            setShowSavePrompt(true);
+            return;
+        }
+        setDialogOpen(false);
+        setSelectedDescription(null);
+        setFileUrl(null);
+    };
+
+    const handleSavePromptClose = () => {
+        setShowSavePrompt(false);
         setDialogOpen(false);
         setSelectedDescription(null);
         setFileUrl(null);
@@ -131,11 +154,28 @@ const PositionDescriptionList: React.FC = () => {
             setRespLoading(true);
             fetch(`http://localhost:3000/api/upload/${selectedDescription.id}/responsibilities`)
                 .then(res => res.json())
-                .then(data => setResponsibilities(data))
-                .catch(() => setResponsibilities([]))
+                .then(data => {
+                    setResponsibilities(data);
+                    setOriginalResponsibilities(data);
+                })
+                .catch(() => {
+                    setResponsibilities([]);
+                    setOriginalResponsibilities([]);
+                })
                 .finally(() => setRespLoading(false));
         }
     }, [dialogOpen, tabIndex, selectedDescription]);
+
+    // Compare responsibilities to see if any changes were made
+    const hasChanges = () => {
+        if (responsibilities.length !== originalResponsibilities.length) return true;
+        for (let i = 0; i < responsibilities.length; i++) {
+            if (responsibilities[i].responsibility_percentage !== originalResponsibilities[i].responsibility_percentage) {
+                return true;
+            }
+        }
+        return false;
+    };
 
     // Handle slider change (UI only)
     const handleSliderChange = (id: number, newValue: number) => {
@@ -148,6 +188,55 @@ const PositionDescriptionList: React.FC = () => {
 
     // Calculate total percentage
     const totalPercentage = responsibilities.reduce((sum, r) => sum + Number(r.responsibility_percentage), 0);
+
+    // Save changes to backend
+    const handleSavePromptYes = async () => {
+        // Find changed responsibilities
+        const changed = responsibilities.filter((resp, i) =>
+            resp.responsibility_percentage !== originalResponsibilities[i]?.responsibility_percentage
+        );
+        // Send updates to backend
+        await Promise.all(
+            changed.map((resp) =>
+                fetch(`http://localhost:3000/api/upload/responsibility/${resp.id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ responsibility_percentage: Math.round(resp.responsibility_percentage) })
+                })
+            )
+        );
+        setShowSavePrompt(false);
+        setDialogOpen(false);
+        setSelectedDescription(null);
+        setFileUrl(null);
+    };
+
+    // Add new responsibility
+    const handleAddNew = async () => {
+        if (!selectedDescription || !newRespText.trim()) return;
+        setAdding(true);
+        await fetch(`http://localhost:3000/api/upload/${selectedDescription.id}/responsibilities`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ responsibility_name: newRespText.trim() })
+        });
+        setAddDialogOpen(false);
+        setNewRespText('');
+        setAdding(false);
+        // Refresh responsibilities
+        setRespLoading(true);
+        fetch(`http://localhost:3000/api/upload/${selectedDescription.id}/responsibilities`)
+            .then(res => res.json())
+            .then(data => {
+                setResponsibilities(data);
+                setOriginalResponsibilities(data);
+            })
+            .catch(() => {
+                setResponsibilities([]);
+                setOriginalResponsibilities([]);
+            })
+            .finally(() => setRespLoading(false));
+    };
 
     if (loading) {
         return (
@@ -224,8 +313,11 @@ const PositionDescriptionList: React.FC = () => {
 
             {/* Popup Dialog for file preview and responsibilities */}
             <Dialog open={dialogOpen} onClose={handleDialogClose} maxWidth="md" fullWidth>
-                <DialogTitle>
-                    {selectedDescription?.title}
+                <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span>{selectedDescription?.title}</span>
+                    <IconButton aria-label="close" onClick={() => handleDialogClose()} sx={{ color: 'error.main' }}>
+                        <CloseIcon />
+                    </IconButton>
                 </DialogTitle>
                 <DialogContent>
                     <Tabs value={tabIndex} onChange={handleTabChange} sx={{ mb: 2 }}>
@@ -284,15 +376,15 @@ const PositionDescriptionList: React.FC = () => {
                                     <Table size="small">
                                         <TableHead>
                                             <TableRow>
-                                                <TableCell>Responsibility</TableCell>
-                                                <TableCell align="center">Percentage</TableCell>
+                                                <TableCell sx={{ width: '80%' }}>Responsibility</TableCell>
+                                                <TableCell align="center" sx={{ width: '20%' }}>Percentage</TableCell>
                                             </TableRow>
                                         </TableHead>
                                         <TableBody>
                                             {responsibilities.map((resp) => (
                                                 <TableRow key={resp.id}>
-                                                    <TableCell>{resp.responsibility_name}</TableCell>
-                                                    <TableCell align="center">
+                                                    <TableCell sx={{ width: '80%' }}>{resp.responsibility_name}</TableCell>
+                                                    <TableCell align="center" sx={{ width: '20%' }}>
                                                         <Box display="flex" alignItems="center" gap={2}>
                                                             <Slider
                                                                 value={Math.round(resp.responsibility_percentage)}
@@ -317,9 +409,52 @@ const PositionDescriptionList: React.FC = () => {
                                     No responsibilities found.
                                 </Typography>
                             )}
+                            <Box mt={3} display="flex" justifyContent="flex-end" gap={2}>
+                                <Button variant="outlined" color="primary" onClick={() => setAddDialogOpen(true)}>
+                                    Add New
+                                </Button>
+                                <Button variant="outlined" color="secondary" onClick={() => setResponsibilities(originalResponsibilities.map(r => ({ ...r })))}>
+                                    Reset
+                                </Button>
+                            </Box>
                         </Box>
                     )}
                 </DialogContent>
+            </Dialog>
+
+            {/* Save changes prompt */}
+            <Dialog open={showSavePrompt} onClose={handleSavePromptClose}>
+                <DialogTitle>Unsaved Changes</DialogTitle>
+                <DialogContent>
+                    <Typography>You have unsaved changes. Do you want to save your changes?</Typography>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={handleSavePromptYes} color="primary">Yes</Button>
+                    <Button onClick={handleSavePromptClose} color="primary">No</Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Add New Responsibility Dialog */}
+            <Dialog open={addDialogOpen} onClose={() => setAddDialogOpen(false)}>
+                <DialogTitle>Add New Responsibility</DialogTitle>
+                <DialogContent>
+                    <TextField
+                        autoFocus
+                        margin="dense"
+                        label="Responsibility Description"
+                        type="text"
+                        fullWidth
+                        value={newRespText}
+                        onChange={e => setNewRespText(e.target.value)}
+                        disabled={adding}
+                    />
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setAddDialogOpen(false)} color="secondary" disabled={adding}>Cancel</Button>
+                    <Button onClick={handleAddNew} color="primary" disabled={adding || !newRespText.trim()}>
+                        {adding ? 'Adding...' : 'Add'}
+                    </Button>
+                </DialogActions>
             </Dialog>
         </Box>
     );
