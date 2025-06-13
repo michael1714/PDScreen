@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import './App.css'
+import PositionDescriptionUpload from './components/PositionDescriptionUpload'
 
 function App() {
   const [greeting, setGreeting] = useState('Loading...')
@@ -20,7 +21,8 @@ function App() {
   }, [])
 
   return (
-    <div className="app">
+    <div className="App">
+      <PositionDescriptionUpload />
       <h1>{greeting}</h1>
     </div>
   )

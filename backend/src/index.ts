@@ -2,6 +2,8 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { pool, initializeDatabase } from './db/init';
+import uploadRouter from './routes/upload';
+import fs from 'fs';
 
 dotenv.config();
 
@@ -12,8 +14,16 @@ const port = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
+// Create uploads directory if it doesn't exist
+if (!fs.existsSync('uploads')) {
+    fs.mkdirSync('uploads');
+}
+
 // Initialize database
 initializeDatabase().catch(console.error);
+
+// Routes
+app.use('/api/upload', uploadRouter);
 
 // Get content by key
 app.get('/api/content/:key', async (req, res) => {
