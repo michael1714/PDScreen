@@ -1,3 +1,19 @@
+body, html, #root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+.App {
+  min-height: 100vh;
+  background: #fff;
+}
+
+/* Add padding to prevent content from being hidden under the AppBar */
+.main-content {
+  padding-top: 96px;
+}
+
 .app {
   padding: 2rem;
   text-align: center;
