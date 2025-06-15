@@ -16,6 +16,14 @@ CREATE TABLE IF NOT EXISTS position_descriptions (
     status VARCHAR(50) DEFAULT 'pending'
 );
 
+CREATE TABLE IF NOT EXISTS responsibilities (
+    id SERIAL PRIMARY KEY,
+    pd_id INTEGER NOT NULL REFERENCES position_descriptions(id) ON DELETE CASCADE,
+    responsibility_name TEXT NOT NULL,
+    responsibility_percentage NUMERIC NOT NULL,
+    llm_wording TEXT
+);
+
 -- Insert initial data
 INSERT INTO content (key, value) 
 VALUES ('greeting', 'Hello World!')

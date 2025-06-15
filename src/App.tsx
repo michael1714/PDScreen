@@ -77,6 +77,9 @@ function App() {
         <Navigation />
         <div className="main-content">
           <Container>
+            <Typography variant="h4" component="h1" gutterBottom>
+              Position Description App
+            </Typography>
             <Routes>
               <Route path="/" element={<PositionDescriptionUpload />} />
               <Route path="/list" element={<PositionDescriptionList />} />
