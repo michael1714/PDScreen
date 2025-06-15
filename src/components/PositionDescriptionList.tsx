@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
     Box,
     Typography,
@@ -20,13 +20,35 @@ import {
     DialogActions,
     Button,
     Link,
-    Switch
+    Switch,
+    Tooltip,
+    Card,
+    CardContent,
+    CardActions,
+    TextField,
+    InputAdornment,
+    MenuItem,
+    Select,
+    FormControl,
+    InputLabel,
+    Chip,
+    Stack,
+    Grid,
 } from '@mui/material';
 import DownloadIcon from '@mui/icons-material/Download';
 import DeleteIcon from '@mui/icons-material/Delete';
 import Slider from '@mui/material/Slider';
 import CloseIcon from '@mui/icons-material/Close';
-import TextField from '@mui/material/TextField';
+import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
+import EditIcon from '@mui/icons-material/Edit';
+import SaveIcon from '@mui/icons-material/Save';
+import CancelIcon from '@mui/icons-material/Cancel';
+import SearchIcon from '@mui/icons-material/Search';
+import FilterListIcon from '@mui/icons-material/FilterList';
+import SortIcon from '@mui/icons-material/Sort';
+import DescriptionIcon from '@mui/icons-material/Description';
+import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
+import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 
 interface PositionDescription {
     id: number;
@@ -34,6 +56,8 @@ interface PositionDescription {
     file_name: string;
     upload_date: string;
     status: string;
+    department: string;
+    updated_at: string;
 }
 
 const PositionDescriptionList: React.FC = () => {
@@ -55,6 +79,20 @@ const PositionDescriptionList: React.FC = () => {
     const [removeDialogOpen, setRemoveDialogOpen] = useState(false);
     const [removingId, setRemovingId] = useState<number | null>(null);
     const [llmSwitchStates, setLlmSwitchStates] = useState<{ [id: number]: boolean }>({});
+    const [llmMasterSwitch, setLlmMasterSwitch] = useState(false);
+    const [llmLoading, setLlmLoading] = useState<{ [id: number]: boolean }>({});
+    const [llmConfirmOpen, setLlmConfirmOpen] = useState<{ open: boolean, resp: any | null }>({ open: false, resp: null });
+    const [editingDescId, setEditingDescId] = useState<number | null>(null);
+    const [editingDescValue, setEditingDescValue] = useState<string>('');
+    const [descSaving, setDescSaving] = useState<{ [id: number]: boolean }>({});
+    const [editingDescType, setEditingDescType] = useState<'original' | 'llm'>('original');
+    const [searchQuery, setSearchQuery] = useState('');
+    const [departmentFilter, setDepartmentFilter] = useState('');
+    const [sortBy, setSortBy] = useState('date');
+    const [sortOrder, setSortOrder] = useState('desc');
+
+    const POLL_INTERVAL_MS = 1500;
+    const POLL_TIMEOUT_MS = 30000;
 
     const fetchDescriptions = async () => {
         try {
@@ -161,7 +199,7 @@ const PositionDescriptionList: React.FC = () => {
                 .then(res => res.json())
                 .then(data => {
                     setResponsibilities(data);
-                    setOriginalResponsibilities(data);
+                    setOriginalResponsibilities(data.map((r: any) => ({ ...r })));
                 })
                 .catch(() => {
                     setResponsibilities([]);
@@ -174,19 +212,53 @@ const PositionDescriptionList: React.FC = () => {
     // Compare responsibilities to see if any changes were made
     const hasChanges = () => {
         if (responsibilities.length !== originalResponsibilities.length) return true;
-        for (let i = 0; i < responsibilities.length; i++) {
-            if (responsibilities[i].responsibility_percentage !== originalResponsibilities[i].responsibility_percentage) {
-                return true;
-            }
+        const originalMap = new Map(originalResponsibilities.map((r: any) => [r.id, r]));
+        for (const resp of responsibilities) {
+            const orig = originalMap.get(resp.id);
+            if (!orig) return true;
+            if (resp.responsibility_percentage !== orig.responsibility_percentage) return true;
+            // Add more field comparisons here if needed
         }
         return false;
+    };
+
+    // Helper to clamp all responsibilities so total never exceeds 100%
+    const clampResponsibilities = (resps: any[]): any[] => {
+        let total = 0;
+        return resps.map((resp: any, idx: number) => {
+            const maxAllowed = Math.max(0, 100 - total);
+            const clamped = Math.min(resp.responsibility_percentage, maxAllowed);
+            total += clamped;
+            return { ...resp, responsibility_percentage: clamped };
+        });
+    };
+
+    // On initial load or reset, clamp all values if total > 100
+    useEffect(() => {
+        if (responsibilities.length > 0) {
+            const total = responsibilities.reduce((sum, r) => sum + Number(r.responsibility_percentage), 0);
+            if (total > 100) {
+                setResponsibilities(clampResponsibilities(responsibilities));
+            }
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [dialogOpen, tabIndex]);
+
+    // Calculate max value for a slider based on other responsibilities
+    const calculateAllowedValue = (currentId: number, newValue: number) => {
+        const otherTotal = responsibilities
+            .filter(r => r.id !== currentId)
+            .reduce((sum, r) => sum + Number(r.responsibility_percentage), 0);
+        return Math.max(0, Math.min(newValue, 100 - otherTotal));
     };
 
     // Handle slider change (UI only)
     const handleSliderChange = (id: number, newValue: number) => {
         setResponsibilities((prev) =>
             prev.map((resp) =>
-                resp.id === id ? { ...resp, responsibility_percentage: newValue } : resp
+                resp.id === id
+                    ? { ...resp, responsibility_percentage: calculateAllowedValue(id, newValue as number) }
+                    : resp
             )
         );
     };
@@ -234,7 +306,7 @@ const PositionDescriptionList: React.FC = () => {
             .then(res => res.json())
             .then(data => {
                 setResponsibilities(data);
-                setOriginalResponsibilities(data);
+                setOriginalResponsibilities(data.map((r: any) => ({ ...r })));
             })
             .catch(() => {
                 setResponsibilities([]);
@@ -266,8 +338,218 @@ const PositionDescriptionList: React.FC = () => {
         setRemovingId(null);
     };
 
-    const handleLlmSwitchChange = (id: number) => {
-        setLlmSwitchStates((prev) => ({ ...prev, [id]: !prev[id] }));
+    const handleLlmSwitchChange = async (id: number) => {
+        const resp = responsibilities.find(r => r.id === id);
+        if (!resp) return;
+
+        const newValue = !resp.is_llm_version;
+        
+        try {
+            const response = await fetch(`http://localhost:3000/api/upload/responsibility/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    is_llm_version: newValue,
+                    responsibility_percentage: resp.responsibility_percentage,
+                    responsibility_name: resp.responsibility_name,
+                    LLM_Desc: resp.LLM_Desc
+                })
+            });
+
+            if (!response.ok) throw new Error('Failed to update responsibility');
+
+            // Update local state
+            setResponsibilities(responsibilities.map(r =>
+                r.id === id ? { ...r, is_llm_version: newValue } : r
+            ));
+        } catch (error) {
+            console.error('Error updating responsibility:', error);
+            // Optionally show an error message to the user
+        }
+    };
+
+    const handleLlmMasterSwitchChange = async () => {
+        const newValue = !llmMasterSwitch;
+        setLlmMasterSwitch(newValue);
+        
+        // Update all responsibilities in parallel
+        await Promise.all(responsibilities.map(resp =>
+            fetch(`http://localhost:3000/api/upload/responsibility/${resp.id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    is_llm_version: newValue,
+                    responsibility_percentage: resp.responsibility_percentage,
+                    responsibility_name: resp.responsibility_name,
+                    LLM_Desc: resp.LLM_Desc
+                })
+            })
+        ));
+
+        // Update local state
+        setResponsibilities(responsibilities.map(r => ({ ...r, is_llm_version: newValue })));
+    };
+
+    // Update master switch state when individual toggles change
+    useEffect(() => {
+        if (responsibilities.length > 0) {
+            const allLLM = responsibilities.every(r => r.is_llm_version);
+            setLlmMasterSwitch(allLLM);
+        }
+    }, [responsibilities]);
+
+    const handleLlmIconClick = (resp: any) => {
+        setLlmConfirmOpen({ open: true, resp });
+    };
+
+    const handleLlmConfirm = async () => {
+        if (!llmConfirmOpen.resp) return;
+        const respId = llmConfirmOpen.resp.id;
+        setLlmLoading((prev) => ({ ...prev, [respId]: true }));
+        setLlmConfirmOpen({ open: false, resp: null });
+        try {
+            await fetch('https://hook.eu2.make.com/wpuyuxytd4l1cjm0wq21gkso88mabx25', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    id: respId,
+                    description: llmConfirmOpen.resp.responsibility_name,
+                    llm_description: llmConfirmOpen.resp.LLM_Desc
+                })
+            });
+            // Start polling for the updated LLM_Desc
+            let elapsed = 0;
+            const poll = async () => {
+                if (!selectedDescription) return;
+                const res = await fetch(`http://localhost:3000/api/upload/${selectedDescription.id}/responsibilities`);
+                if (!res.ok) return;
+                const data = await res.json();
+                const updated = data.find((r: any) => r.id === respId);
+                if (updated && updated.LLM_Desc && updated.LLM_Desc !== llmConfirmOpen.resp.LLM_Desc) {
+                    setResponsibilities(data);
+                    setOriginalResponsibilities(data.map((r: any) => ({ ...r })));
+                    setLlmLoading((prev) => ({ ...prev, [respId]: false }));
+                    setLlmSwitchStates((prev) => ({ ...prev, [respId]: true }));
+                    return;
+                }
+                elapsed += POLL_INTERVAL_MS;
+                if (elapsed < POLL_TIMEOUT_MS) {
+                    setTimeout(poll, POLL_INTERVAL_MS);
+                } else {
+                    setLlmLoading((prev) => ({ ...prev, [respId]: false }));
+                }
+            };
+            poll();
+        } catch {
+            setLlmLoading((prev) => ({ ...prev, [respId]: false }));
+        }
+    };
+
+    const handleLlmCancel = () => {
+        setLlmConfirmOpen({ open: false, resp: null });
+    };
+
+    const handleCloseClick = () => {
+        if (hasChanges()) {
+            setShowSavePrompt(true);
+        } else {
+            handleDialogClose();
+        }
+    };
+
+    // Handler to start editing
+    type DescType = 'original' | 'llm';
+    const handleDescEditStart = (id: number, value: string, type: DescType) => {
+        setEditingDescId(id);
+        setEditingDescValue(value);
+        setEditingDescType(type);
+    };
+
+    const handleDescEditChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setEditingDescValue(e.target.value);
+    };
+
+    const handleDescEditSave = async (id: number) => {
+        setDescSaving((prev) => ({ ...prev, [id]: true }));
+        let url = '';
+        let body: any = {};
+        if (editingDescType === 'llm') {
+            url = `http://localhost:3000/api/upload/responsibility/${id}`;
+            body = { LLM_Desc: editingDescValue };
+        } else {
+            url = `http://localhost:3000/api/upload/responsibility/${id}`;
+            body = { responsibility_name: editingDescValue };
+        }
+        await fetch(url, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        });
+        // Refresh responsibilities
+        if (selectedDescription) {
+            const res = await fetch(`http://localhost:3000/api/upload/${selectedDescription.id}/responsibilities`);
+            if (res.ok) {
+                const data = await res.json();
+                setResponsibilities(data);
+                setOriginalResponsibilities(data.map((r: any) => ({ ...r })));
+            }
+        }
+        setDescSaving((prev) => ({ ...prev, [id]: false }));
+        setEditingDescId(null);
+        setEditingDescValue('');
+    };
+
+    const handleDescEditKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, id: number) => {
+        if (e.key === 'Enter') {
+            handleDescEditSave(id);
+        } else if (e.key === 'Escape') {
+            setEditingDescId(null);
+            setEditingDescValue('');
+        }
+    };
+
+    // Add filter and sort logic
+    const filteredAndSortedData = useMemo(() => {
+        let filtered = [...descriptions];
+        
+        // Apply search
+        if (searchQuery) {
+            filtered = filtered.filter(item => 
+                item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                item.department.toLowerCase().includes(searchQuery.toLowerCase())
+            );
+        }
+        
+        // Apply department filter
+        if (departmentFilter) {
+            filtered = filtered.filter(item => item.department === departmentFilter);
+        }
+        
+        // Apply sorting
+        filtered.sort((a, b) => {
+            const order = sortOrder === 'asc' ? 1 : -1;
+            switch (sortBy) {
+                case 'title':
+                    return order * a.title.localeCompare(b.title);
+                case 'department':
+                    return order * a.department.localeCompare(b.department);
+                case 'date':
+                default:
+                    return order * (new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
+            }
+        });
+        
+        return filtered;
+    }, [descriptions, searchQuery, departmentFilter, sortBy, sortOrder]);
+
+    // Get unique departments for filter
+    const departments = useMemo(() => 
+        Array.from(new Set(descriptions.map(item => item.department))),
+        [descriptions]
+    );
+
+    const toggleSortOrder = () => {
+        setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
     };
 
     if (loading) {
@@ -279,7 +561,7 @@ const PositionDescriptionList: React.FC = () => {
     }
 
     return (
-        <Box sx={{ maxWidth: 1200, mx: 'auto', mt: 4, p: 3 }}>
+        <Box sx={{ maxWidth: 1600, mx: 'auto', mt: 4, p: 3 }}>
             <Typography variant="h5" gutterBottom>
                 Position Descriptions
             </Typography>
@@ -290,64 +572,112 @@ const PositionDescriptionList: React.FC = () => {
                 </Alert>
             )}
 
-            <TableContainer component={Paper}>
-                <Table>
-                    <TableHead>
-                        <TableRow>
-                            <TableCell>File Name</TableCell>
-                            <TableCell>Upload Date</TableCell>
-                            <TableCell>Status</TableCell>
-                            <TableCell align="right">Actions</TableCell>
-                        </TableRow>
-                    </TableHead>
-                    <TableBody>
-                        {descriptions.map((description) => (
-                            <TableRow key={description.id}>
-                                <TableCell>
-                                    <a
-                                        href="#"
-                                        style={{ textDecoration: 'underline', color: '#1976d2', cursor: 'pointer' }}
-                                        onClick={e => { e.preventDefault(); handleFileNameClick(description); }}
+            {/* Search and Filter Section */}
+            <Box sx={{ mb: 4 }}>
+                <Grid container spacing={2} alignItems="center" justifyContent="center">
+                    <Grid item sx={{ flexGrow: 1, minWidth: 150 }}>
+                        <FormControl fullWidth size="medium" sx={{ minWidth: 150 }}>
+                            <InputLabel>Department</InputLabel>
+                            <Select
+                                value={departmentFilter}
+                                onChange={(e) => setDepartmentFilter(e.target.value)}
+                                label="Department"
+                            >
+                                <MenuItem value="">All Departments</MenuItem>
+                                {departments.map(dept => (
+                                    <MenuItem key={dept} value={dept}>{dept}</MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
+                    </Grid>
+                    <Grid item sx={{ flexGrow: 1, minWidth: 150 }}>
+                        <FormControl fullWidth size="medium" sx={{ minWidth: 150 }}>
+                            <InputLabel>Sort By</InputLabel>
+                            <Select
+                                value={sortBy}
+                                onChange={(e) => setSortBy(e.target.value)}
+                                label="Sort By"
+                            >
+                                <MenuItem value="date">Date</MenuItem>
+                                <MenuItem value="title">Title</MenuItem>
+                                <MenuItem value="department">Department</MenuItem>
+                            </Select>
+                        </FormControl>
+                    </Grid>
+                    <Grid item sx={{ flexGrow: 0, minWidth: 60, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Button
+                            variant="outlined"
+                            onClick={toggleSortOrder}
+                            sx={{ minWidth: 60, height: 56, ml: 1 }}
+                            aria-label={sortOrder === 'asc' ? 'Sort ascending' : 'Sort descending'}
+                        >
+                            {sortOrder === 'asc' ? <ArrowUpwardIcon /> : <ArrowDownwardIcon />}
+                        </Button>
+                    </Grid>
+                </Grid>
+            </Box>
+
+            {/* Cards Grid */}
+            <Grid container spacing={3}>
+                {filteredAndSortedData.map((item) => {
+                    let dateLabel = '—';
+                    if (item.updated_at) {
+                        const d = new Date(item.updated_at);
+                        if (!isNaN(d.getTime())) {
+                            dateLabel = d.toLocaleDateString();
+                        }
+                    }
+                    return (
+                        <Grid item xs={12} sm={6} md={4} key={item.id} component="div">
+                            <Card 
+                                sx={{ 
+                                    height: '100%',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    transition: 'transform 0.2s, box-shadow 0.2s',
+                                    '&:hover': {
+                                        transform: 'translateY(-4px)',
+                                        boxShadow: 3
+                                    }
+                                }}
+                            >
+                                <CardContent sx={{ flexGrow: 1 }}>
+                                    <Typography variant="h6" component="h2" gutterBottom>
+                                        {item.title}
+                                    </Typography>
+                                </CardContent>
+                                <CardActions>
+                                    <Button
+                                        size="small"
+                                        onClick={() => handleFileNameClick(item)}
+                                        startIcon={<DescriptionIcon />}
                                     >
-                                        {description.title}
-                                    </a>
-                                </TableCell>
-                                <TableCell>
-                                    {new Date(description.upload_date).toLocaleDateString()}
-                                </TableCell>
-                                <TableCell>{description.status}</TableCell>
-                                <TableCell align="right">
+                                        View Details
+                                    </Button>
                                     <IconButton
-                                        onClick={() => handleDownload(description.id, description.file_name)}
+                                        onClick={() => handleDownload(item.id, item.file_name)}
                                         color="primary"
                                     >
                                         <DownloadIcon />
                                     </IconButton>
                                     <IconButton
-                                        onClick={() => handleDelete(description.id)}
+                                        onClick={() => handleDelete(item.id)}
                                         color="error"
                                     >
                                         <DeleteIcon />
                                     </IconButton>
-                                </TableCell>
-                            </TableRow>
-                        ))}
-                        {descriptions.length === 0 && (
-                            <TableRow>
-                                <TableCell colSpan={4} align="center">
-                                    No position descriptions found
-                                </TableCell>
-                            </TableRow>
-                        )}
-                    </TableBody>
-                </Table>
-            </TableContainer>
+                                </CardActions>
+                            </Card>
+                        </Grid>
+                    );
+                })}
+            </Grid>
 
             {/* Popup Dialog for file preview and responsibilities */}
             <Dialog open={dialogOpen} onClose={handleDialogClose} maxWidth="md" fullWidth>
                 <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <span>{selectedDescription?.title}</span>
-                    <IconButton aria-label="close" onClick={() => handleDialogClose()} sx={{ color: 'error.main' }}>
+                    <IconButton aria-label="close" onClick={handleCloseClick} sx={{ color: 'error.main' }}>
                         <CloseIcon />
                     </IconButton>
                 </DialogTitle>
@@ -409,6 +739,16 @@ const PositionDescriptionList: React.FC = () => {
                                         <TableHead>
                                             <TableRow>
                                                 <TableCell style={{ width: '5%' }} />
+                                                <TableCell style={{ width: '10%' }} align="center">
+                                                    LLM Response
+                                                    <Switch
+                                                        checked={llmMasterSwitch}
+                                                        onChange={handleLlmMasterSwitchChange}
+                                                        color="success"
+                                                        size="small"
+                                                        inputProps={{ 'aria-label': 'Toggle all LLM responses' }}
+                                                    />
+                                                </TableCell>
                                                 <TableCell>Description</TableCell>
                                                 <TableCell style={{ width: '20%' }}>Percentage</TableCell>
                                             </TableRow>
@@ -418,32 +758,100 @@ const PositionDescriptionList: React.FC = () => {
                                                 <TableRow key={resp.id}>
                                                     <TableCell>
                                                         <Box display="flex" alignItems="center" justifyContent="center" gap={1}>
-                                                            <Switch
-                                                                checked={!!llmSwitchStates[resp.id]}
-                                                                onChange={() => handleLlmSwitchChange(resp.id)}
-                                                                color="success"
-                                                                inputProps={{ 'aria-label': 'LLM wording toggle' }}
-                                                                sx={{ '& .MuiSwitch-thumb': { bgcolor: llmSwitchStates[resp.id] ? 'success.main' : 'grey.300' } }}
-                                                            />
-                                                            <Link href="#" color="inherit">
-                                                                <img src="/llm-icon.png" alt="LLM" style={{ width: 32, height: 32 }} />
-                                                            </Link>
+                                                            <Tooltip title="Ask the LLM to rewrite this responsibility?">
+                                                                <span>
+                                                                    <IconButton
+                                                                        onClick={e => { e.preventDefault(); handleLlmIconClick(resp); }}
+                                                                        sx={{
+                                                                            color: 'primary.main',
+                                                                            '&:hover': {
+                                                                                backgroundColor: 'primary.light',
+                                                                                color: 'primary.contrastText'
+                                                                            }
+                                                                        }}
+                                                                    >
+                                                                        <AutoFixHighIcon />
+                                                                    </IconButton>
+                                                                </span>
+                                                            </Tooltip>
                                                             <Link href="#" color="inherit" onClick={e => { e.preventDefault(); handleRemoveClick(resp.id); }}>
                                                                 <img src="/x-icon.png" alt="X" style={{ width: 32, height: 32 }} />
                                                             </Link>
                                                         </Box>
                                                     </TableCell>
-                                                    <TableCell>{llmSwitchStates[resp.id] ? resp.LLM_Desc : resp.responsibility_name}</TableCell>
-                                                    <TableCell>
-                                                        <Slider
-                                                            value={Math.round(resp.responsibility_percentage)}
-                                                            onChange={(_, value) => handleSliderChange(resp.id, value as number)}
-                                                            min={0}
-                                                            max={100}
-                                                            step={1}
-                                                            marks
-                                                            valueLabelDisplay="auto"
+                                                    <TableCell align="center">
+                                                        <Switch
+                                                            checked={!!resp.is_llm_version}
+                                                            onChange={async () => {
+                                                                const newValue = !resp.is_llm_version;
+                                                                // Update backend
+                                                                await fetch(`http://localhost:3000/api/upload/responsibility/${resp.id}`, {
+                                                                    method: 'PUT',
+                                                                    headers: { 'Content-Type': 'application/json' },
+                                                                    body: JSON.stringify({ is_llm_version: newValue })
+                                                                });
+                                                                // Update local state
+                                                                setResponsibilities((prev) =>
+                                                                    prev.map((r) =>
+                                                                        r.id === resp.id ? { ...r, is_llm_version: newValue } : r
+                                                                    )
+                                                                );
+                                                            }}
+                                                            color="success"
+                                                            inputProps={{ 'aria-label': 'LLM wording toggle' }}
+                                                            sx={{ '& .MuiSwitch-thumb': { bgcolor: resp.is_llm_version ? 'success.main' : 'grey.300' } }}
                                                         />
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        {editingDescId === resp.id ? (
+                                                            <TextField
+                                                                value={editingDescValue}
+                                                                onChange={handleDescEditChange}
+                                                                onBlur={() => handleDescEditSave(resp.id)}
+                                                                onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => handleDescEditKeyDown(e, resp.id)}
+                                                                size="small"
+                                                                autoFocus
+                                                                disabled={descSaving[resp.id]}
+                                                                fullWidth
+                                                            />
+                                                        ) : (
+                                                            <Box display="flex" alignItems="center">
+                                                                <span>
+                                                                    {resp.is_llm_version ? resp.LLM_Desc || <i style={{ color: '#aaa' }}>[No LLM description]</i> : resp.responsibility_name}
+                                                                </span>
+                                                                <IconButton
+                                                                    onClick={() => handleDescEditStart(resp.id, resp.is_llm_version ? resp.LLM_Desc : resp.responsibility_name, resp.is_llm_version ? 'llm' : 'original')}
+                                                                    sx={{
+                                                                        color: 'primary.main',
+                                                                        '&:hover': {
+                                                                            backgroundColor: 'primary.light',
+                                                                            color: 'primary.contrastText'
+                                                                        }
+                                                                    }}
+                                                                >
+                                                                    <EditIcon />
+                                                                </IconButton>
+                                                                {descSaving[resp.id] && <CircularProgress size={18} sx={{ ml: 1 }} />}
+                                                            </Box>
+                                                        )}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <Box display="flex" alignItems="center" gap={2}>
+                                                            <Slider
+                                                                value={Math.round(resp.responsibility_percentage)}
+                                                                onChange={(_, value) => handleSliderChange(resp.id, value as number)}
+                                                                min={0}
+                                                                max={100}
+                                                                step={1}
+                                                                marks
+                                                                valueLabelDisplay="auto"
+                                                                disabled={totalPercentage >= 100 && resp.responsibility_percentage === 0}
+                                                                sx={{ flexGrow: 1 }}
+                                                            />
+                                                            <Typography variant="body2" sx={{ minWidth: 45, textAlign: 'right' }}>
+                                                                {Math.round(resp.responsibility_percentage)}%
+                                                            </Typography>
+                                                        </Box>
                                                     </TableCell>
                                                 </TableRow>
                                             ))}
@@ -509,6 +917,18 @@ const PositionDescriptionList: React.FC = () => {
                 <DialogActions>
                     <Button onClick={handleRemoveConfirm} color="error">Yes</Button>
                     <Button onClick={handleRemoveCancel} color="primary">No</Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* LLM Confirmation Dialog */}
+            <Dialog open={llmConfirmOpen.open} onClose={handleLlmCancel}>
+                <DialogTitle>Are you sure?</DialogTitle>
+                <DialogContent>
+                    <Typography>Do you want to ask the LLM to rewrite this responsibility?</Typography>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={handleLlmConfirm} color="primary">Yes</Button>
+                    <Button onClick={handleLlmCancel} color="secondary">No</Button>
                 </DialogActions>
             </Dialog>
         </Box>
