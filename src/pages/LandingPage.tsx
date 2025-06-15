@@ -52,26 +52,41 @@ const LandingPage: React.FC = () => {
     <div className={styles.landingRoot}>
       {/* Hero Section */}
       <div className={styles.heroSection}>
-        <div className={styles.headline}>
-          Effortlessly Upload & Manage Position Descriptions
+        <div className={styles.heroContentRow}>
+          <div className={styles.heroTextContainer}>
+            <div className={styles.heroLogo}>
+              {/* Placeholder for logo */}
+              <CloudUploadIcon style={{ fontSize: 48, color: '#fff' }} />
+            </div>
+            <div className={styles.heroLabel}>AI-POWERED PD MANAGEMENT</div>
+            <div className={styles.heroHeadline}>
+              Effortlessly Upload<br />
+              & Manage <span className={styles.heroAccent}>Position Descriptions</span>
+            </div>
+            <div className={styles.heroSubheadline}>
+              Streamline your HR workflow. Upload, organize, and analyze PDs with AI-driven insights—all in one place.
+            </div>
+            <Button
+              variant="contained"
+              color="secondary"
+              size="large"
+              startIcon={<CloudUploadIcon />}
+              style={{ fontWeight: 700, fontSize: '1.15rem', padding: '0.85rem 2.2rem', borderRadius: 12, boxShadow: '0 2px 12px rgba(30,60,114,0.18)' }}
+              onClick={() => navigate('/upload')}
+              aria-label="Upload your PDs"
+            >
+              Upload your PDs
+            </Button>
+          </div>
+          <div className={styles.heroImageContainer}>
+            <img
+              src="https://lh3.googleusercontent.com/GMUMZMPg3Q90VoiPWv6QTAPhdCc8DcOPUVjp0SjPemKYj8s7jziYl4-z7wIwGSo0C7rJ-dTKLi3M20vuv6aJXta5ciC_-rhJxg=w888"
+              alt="PD Screen App Screenshot"
+              className={styles.heroImage}
+              style={{ maxWidth: '500px', width: '100%', borderRadius: '18px', boxShadow: '0 6px 32px rgba(30,60,114,0.18)' }}
+            />
+          </div>
         </div>
-        <div className={styles.subheadline}>
-          Streamline your HR workflow. Upload, analyze, and organize PDs with AI-powered insights and a beautiful, modern interface.
-        </div>
-        <Paper elevation={4} className={styles.uploadCard}>
-          <CloudUploadIcon style={{ fontSize: 48, color: '#1e3c72', marginBottom: 12 }} />
-          <div style={{ fontWeight: 600, fontSize: '1.2rem', marginBottom: 8 }}>Upload your first Position Description</div>
-          <Button
-            variant="contained"
-            color="primary"
-            size="large"
-            onClick={() => navigate('/upload')}
-            startIcon={<CloudUploadIcon />}
-            sx={{ mt: 1 }}
-          >
-            Upload Now
-          </Button>
-        </Paper>
       </div>
 
       {/* Down Arrow Scroll Indicator */}
@@ -81,40 +96,41 @@ const LandingPage: React.FC = () => {
         </svg>
       </div>
 
-      {/* How it Works Section */}
-      <div className={styles.headline} style={{ color: '#fff', fontSize: '2.2rem', marginBottom: 0, fontWeight: 700, letterSpacing: 1 }}>
-        How it Works
-      </div>
-      <div className={styles.howSteps}>
-        <div className={styles.howStep}>
-          <DescriptionIcon aria-label="Upload" style={{ fontSize: 44, color: '#fff', marginBottom: 8 }} />
-          <div style={{ fontWeight: 600, marginBottom: 4 }}>1. Upload</div>
-          <div>Drag & drop or select your PD file to get started.</div>
+      {/* White Section with rounded corners */}
+      <div className={styles.whiteSection}>
+        {/* How it Works Section */}
+        <div className={styles.headline} style={{ color: '#1e3c72', fontSize: '2.2rem', marginBottom: 0, fontWeight: 700, letterSpacing: 1 }}>
+          How it Works
         </div>
-        <div className={styles.howStep}>
-          <SearchIcon aria-label="Analyze" style={{ fontSize: 44, color: '#fff', marginBottom: 8 }} />
-          <div style={{ fontWeight: 600, marginBottom: 4 }}>2. Analyze</div>
-          <div>Let our AI extract and summarize key responsibilities.</div>
+        <div className={styles.howSteps}>
+          <div className={styles.howStep}>
+            <DescriptionIcon aria-label="Upload" style={{ fontSize: 44, color: '#1e3c72', marginBottom: 8 }} />
+            <div style={{ fontWeight: 600, marginBottom: 4 }}>1. Upload</div>
+            <div>Drag & drop or select your PD file to get started.</div>
+          </div>
+          <div className={styles.howStep}>
+            <SearchIcon aria-label="Analyze" style={{ fontSize: 44, color: '#1e3c72', marginBottom: 8 }} />
+            <div style={{ fontWeight: 600, marginBottom: 4 }}>2. Analyze</div>
+            <div>Let our AI extract and summarize key responsibilities.</div>
+          </div>
+          <div className={styles.howStep}>
+            <CheckCircleIcon aria-label="Organize" style={{ fontSize: 44, color: '#1e3c72', marginBottom: 8 }} />
+            <div style={{ fontWeight: 600, marginBottom: 4 }}>3. Organize</div>
+            <div>Review, edit, and manage all your PDs in one place.</div>
+          </div>
         </div>
-        <div className={styles.howStep}>
-          <CheckCircleIcon aria-label="Organize" style={{ fontSize: 44, color: '#fff', marginBottom: 8 }} />
-          <div style={{ fontWeight: 600, marginBottom: 4 }}>3. Organize</div>
-          <div>Review, edit, and manage all your PDs in one place.</div>
-        </div>
-      </div>
 
-      {/* Review Section */}
-      <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', margin: '3rem 0 2rem 0' }}>
-        <div style={{ color: '#fff', fontSize: '2rem', fontWeight: 700, marginBottom: '1.5rem', letterSpacing: 1 }}>What Our Users Say</div>
+        {/* Review Section */}
+        <div style={{ color: '#1e3c72', fontSize: '2rem', fontWeight: 700, margin: '3rem 0 1.5rem 0', letterSpacing: 1 }}>What Our Users Say</div>
         <div style={{ position: 'relative', width: '100%', maxWidth: 800, margin: '0 auto', display: 'flex', alignItems: 'center' }}>
           <IconButton 
             onClick={handleBack}
             sx={{ 
-              color: '#fff',
+              color: '#1e3c72',
               position: 'absolute',
               left: -60,
               '&:hover': {
-                backgroundColor: 'rgba(255,255,255,0.1)'
+                backgroundColor: 'rgba(30,60,114,0.1)'
               }
             }}
           >
@@ -122,11 +138,11 @@ const LandingPage: React.FC = () => {
           </IconButton>
           
           <div style={{ 
-            background: 'rgba(255,255,255,0.18)', 
+            background: 'rgba(30,60,114,0.1)', 
             borderRadius: 14, 
             boxShadow: '0 2px 12px rgba(30,60,114,0.10)', 
             padding: '2rem 1.5rem', 
-            color: '#fff', 
+            color: '#1e3c72', 
             fontWeight: 500, 
             textAlign: 'center',
             minHeight: 200,
@@ -143,22 +159,20 @@ const LandingPage: React.FC = () => {
           <IconButton 
             onClick={handleNext}
             sx={{ 
-              color: '#fff',
+              color: '#1e3c72',
               position: 'absolute',
               right: -60,
               '&:hover': {
-                backgroundColor: 'rgba(255,255,255,0.1)'
+                backgroundColor: 'rgba(30,60,114,0.1)'
               }
             }}
           >
             <ArrowForwardIosIcon />
           </IconButton>
         </div>
-      </div>
 
-      {/* Call to Action Section */}
-      <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', margin: '2.5rem 0 3rem 0' }}>
-        <div style={{ color: '#fff', fontSize: '2.1rem', fontWeight: 800, marginBottom: '1.2rem', letterSpacing: 1, textAlign: 'center', maxWidth: 700 }}>
+        {/* Call to Action Section */}
+        <div style={{ color: '#1e3c72', fontSize: '2.1rem', fontWeight: 800, margin: '3rem 0 1.2rem 0', letterSpacing: 1, textAlign: 'center', maxWidth: 700 }}>
           Ready to streamline your Position Descriptions?
         </div>
         <Button
@@ -166,12 +180,25 @@ const LandingPage: React.FC = () => {
           color="secondary"
           size="large"
           onClick={() => navigate('/upload')}
-          sx={{ fontSize: '1.2rem', fontWeight: 700, px: 4, py: 1.5, borderRadius: 8, boxShadow: 3, background: '#fff', color: '#1e3c72', '&:hover': { background: '#e0e7ef', color: '#1e3c72' } }}
+          sx={{ fontSize: '1.2rem', fontWeight: 700, px: 4, py: 1.5, borderRadius: 8, boxShadow: 3, background: '#1e3c72', color: '#fff', '&:hover': { background: '#2a5298', color: '#fff' } }}
           aria-label="Get Started"
         >
           Get Started
         </Button>
       </div>
+
+      {/* Footer Section */}
+      <footer className={styles.footerSection}>
+        <nav style={{ marginBottom: '1rem', display: 'flex', gap: '2.5rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+          <a href="/" style={{ color: '#fff', textDecoration: 'none', fontWeight: 600, fontSize: '1.1rem' }}>Home</a>
+          <a href="/upload" style={{ color: '#fff', textDecoration: 'none', fontWeight: 600, fontSize: '1.1rem' }}>Upload</a>
+          <a href="/list" style={{ color: '#fff', textDecoration: 'none', fontWeight: 600, fontSize: '1.1rem' }}>List</a>
+          <a href="mailto:support@pdscreen.com" style={{ color: '#fff', textDecoration: 'none', fontWeight: 600, fontSize: '1.1rem' }}>Contact</a>
+        </nav>
+        <div style={{ opacity: 0.7, fontSize: '1rem', fontWeight: 400 }}>
+          &copy; {new Date().getFullYear()} PD Screen. All rights reserved.
+        </div>
+      </footer>
     </div>
   );
 };
