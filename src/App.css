@@ -5,13 +5,24 @@ body, html, #root {
 }
 
 .App {
+  margin: 0;
+  padding: 0;
+  background: transparent;
   min-height: 100vh;
-  background: #fff;
 }
 
 /* Add padding to prevent content from being hidden under the AppBar */
 .main-content {
+  margin: 0;
+  padding: 0;
+  background: transparent;
   padding-top: 96px;
+}
+
+/* Landing page only: remove padding-top and set blue gradient background */
+.main-content.landing {
+  padding-top: 0;
+  background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
 }
 
 .app {

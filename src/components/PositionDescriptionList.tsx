@@ -25,7 +25,6 @@ import {
     Card,
     CardContent,
     CardActions,
-    Grid,
     TextField,
     InputAdornment,
     MenuItem,
@@ -34,6 +33,7 @@ import {
     InputLabel,
     Chip,
     Stack,
+    Grid,
 } from '@mui/material';
 import DownloadIcon from '@mui/icons-material/Download';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -47,6 +47,8 @@ import SearchIcon from '@mui/icons-material/Search';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import SortIcon from '@mui/icons-material/Sort';
 import DescriptionIcon from '@mui/icons-material/Description';
+import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
+import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 
 interface PositionDescription {
     id: number;
@@ -336,17 +338,65 @@ const PositionDescriptionList: React.FC = () => {
         setRemovingId(null);
     };
 
-    const handleLlmSwitchChange = (id: number) => {
-        setLlmSwitchStates((prev) => ({ ...prev, [id]: !prev[id] }));
+    const handleLlmSwitchChange = async (id: number) => {
+        const resp = responsibilities.find(r => r.id === id);
+        if (!resp) return;
+
+        const newValue = !resp.is_llm_version;
+        
+        try {
+            const response = await fetch(`http://localhost:3000/api/upload/responsibility/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    is_llm_version: newValue,
+                    responsibility_percentage: resp.responsibility_percentage,
+                    responsibility_name: resp.responsibility_name,
+                    LLM_Desc: resp.LLM_Desc
+                })
+            });
+
+            if (!response.ok) throw new Error('Failed to update responsibility');
+
+            // Update local state
+            setResponsibilities(responsibilities.map(r =>
+                r.id === id ? { ...r, is_llm_version: newValue } : r
+            ));
+        } catch (error) {
+            console.error('Error updating responsibility:', error);
+            // Optionally show an error message to the user
+        }
     };
 
-    const handleLlmMasterSwitchChange = () => {
-        const newState = !llmMasterSwitch;
-        setLlmMasterSwitch(newState);
-        const newStates: { [id: number]: boolean } = {};
-        responsibilities.forEach(r => { newStates[r.id] = newState; });
-        setLlmSwitchStates(newStates);
+    const handleLlmMasterSwitchChange = async () => {
+        const newValue = !llmMasterSwitch;
+        setLlmMasterSwitch(newValue);
+        
+        // Update all responsibilities in parallel
+        await Promise.all(responsibilities.map(resp =>
+            fetch(`http://localhost:3000/api/upload/responsibility/${resp.id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    is_llm_version: newValue,
+                    responsibility_percentage: resp.responsibility_percentage,
+                    responsibility_name: resp.responsibility_name,
+                    LLM_Desc: resp.LLM_Desc
+                })
+            })
+        ));
+
+        // Update local state
+        setResponsibilities(responsibilities.map(r => ({ ...r, is_llm_version: newValue })));
     };
+
+    // Update master switch state when individual toggles change
+    useEffect(() => {
+        if (responsibilities.length > 0) {
+            const allLLM = responsibilities.every(r => r.is_llm_version);
+            setLlmMasterSwitch(allLLM);
+        }
+    }, [responsibilities]);
 
     const handleLlmIconClick = (resp: any) => {
         setLlmConfirmOpen({ open: true, resp });
@@ -498,6 +548,10 @@ const PositionDescriptionList: React.FC = () => {
         [descriptions]
     );
 
+    const toggleSortOrder = () => {
+        setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
+    };
+
     if (loading) {
         return (
             <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
@@ -507,7 +561,7 @@ const PositionDescriptionList: React.FC = () => {
     }
 
     return (
-        <Box sx={{ maxWidth: 1200, mx: 'auto', mt: 4, p: 3 }}>
+        <Box sx={{ maxWidth: 1600, mx: 'auto', mt: 4, p: 3 }}>
             <Typography variant="h5" gutterBottom>
                 Position Descriptions
             </Typography>
@@ -520,24 +574,9 @@ const PositionDescriptionList: React.FC = () => {
 
             {/* Search and Filter Section */}
             <Box sx={{ mb: 4 }}>
-                <Grid container spacing={2} alignItems="center">
-                    <Grid sx={{ xs: 12, md: 4 }}>
-                        <TextField
-                            fullWidth
-                            placeholder="Search by title or department..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            InputProps={{
-                                startAdornment: (
-                                    <InputAdornment position="start">
-                                        <SearchIcon />
-                                    </InputAdornment>
-                                ),
-                            }}
-                        />
-                    </Grid>
-                    <Grid sx={{ xs: 12, md: 3 }}>
-                        <FormControl fullWidth>
+                <Grid container spacing={2} alignItems="center" justifyContent="center">
+                    <Grid item sx={{ flexGrow: 1, minWidth: 150 }}>
+                        <FormControl fullWidth size="medium" sx={{ minWidth: 150 }}>
                             <InputLabel>Department</InputLabel>
                             <Select
                                 value={departmentFilter}
@@ -551,8 +590,8 @@ const PositionDescriptionList: React.FC = () => {
                             </Select>
                         </FormControl>
                     </Grid>
-                    <Grid sx={{ xs: 12, md: 3 }}>
-                        <FormControl fullWidth>
+                    <Grid item sx={{ flexGrow: 1, minWidth: 150 }}>
+                        <FormControl fullWidth size="medium" sx={{ minWidth: 150 }}>
                             <InputLabel>Sort By</InputLabel>
                             <Select
                                 value={sortBy}
@@ -565,14 +604,14 @@ const PositionDescriptionList: React.FC = () => {
                             </Select>
                         </FormControl>
                     </Grid>
-                    <Grid sx={{ xs: 12, md: 2 }}>
+                    <Grid item sx={{ flexGrow: 0, minWidth: 60, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <Button
-                            fullWidth
                             variant="outlined"
-                            onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-                            startIcon={<SortIcon />}
+                            onClick={toggleSortOrder}
+                            sx={{ minWidth: 60, height: 56, ml: 1 }}
+                            aria-label={sortOrder === 'asc' ? 'Sort ascending' : 'Sort descending'}
                         >
-                            {sortOrder === 'asc' ? 'Ascending' : 'Descending'}
+                            {sortOrder === 'asc' ? <ArrowUpwardIcon /> : <ArrowDownwardIcon />}
                         </Button>
                     </Grid>
                 </Grid>
@@ -580,63 +619,58 @@ const PositionDescriptionList: React.FC = () => {
 
             {/* Cards Grid */}
             <Grid container spacing={3}>
-                {filteredAndSortedData.map((item) => (
-                    <Grid sx={{ xs: 12, sm: 6, md: 4 }} key={item.id}>
-                        <Card 
-                            sx={{ 
-                                height: '100%',
-                                display: 'flex',
-                                flexDirection: 'column',
-                                transition: 'transform 0.2s, box-shadow 0.2s',
-                                '&:hover': {
-                                    transform: 'translateY(-4px)',
-                                    boxShadow: 3
-                                }
-                            }}
-                        >
-                            <CardContent sx={{ flexGrow: 1 }}>
-                                <Typography variant="h6" component="h2" gutterBottom>
-                                    {item.title}
-                                </Typography>
-                                <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
-                                    <Chip 
-                                        label={item.department} 
-                                        size="small" 
-                                        color="primary" 
-                                        variant="outlined" 
-                                    />
-                                    <Chip 
-                                        label={new Date(item.updated_at).toLocaleDateString()} 
-                                        size="small" 
-                                        color="secondary" 
-                                        variant="outlined" 
-                                    />
-                                </Stack>
-                            </CardContent>
-                            <CardActions>
-                                <Button
-                                    size="small"
-                                    onClick={() => handleFileNameClick(item)}
-                                    startIcon={<DescriptionIcon />}
-                                >
-                                    View Details
-                                </Button>
-                                <IconButton
-                                    onClick={() => handleDownload(item.id, item.file_name)}
-                                    color="primary"
-                                >
-                                    <DownloadIcon />
-                                </IconButton>
-                                <IconButton
-                                    onClick={() => handleDelete(item.id)}
-                                    color="error"
-                                >
-                                    <DeleteIcon />
-                                </IconButton>
-                            </CardActions>
-                        </Card>
-                    </Grid>
-                ))}
+                {filteredAndSortedData.map((item) => {
+                    let dateLabel = '—';
+                    if (item.updated_at) {
+                        const d = new Date(item.updated_at);
+                        if (!isNaN(d.getTime())) {
+                            dateLabel = d.toLocaleDateString();
+                        }
+                    }
+                    return (
+                        <Grid item xs={12} sm={6} md={4} key={item.id} component="div">
+                            <Card 
+                                sx={{ 
+                                    height: '100%',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    transition: 'transform 0.2s, box-shadow 0.2s',
+                                    '&:hover': {
+                                        transform: 'translateY(-4px)',
+                                        boxShadow: 3
+                                    }
+                                }}
+                            >
+                                <CardContent sx={{ flexGrow: 1 }}>
+                                    <Typography variant="h6" component="h2" gutterBottom>
+                                        {item.title}
+                                    </Typography>
+                                </CardContent>
+                                <CardActions>
+                                    <Button
+                                        size="small"
+                                        onClick={() => handleFileNameClick(item)}
+                                        startIcon={<DescriptionIcon />}
+                                    >
+                                        View Details
+                                    </Button>
+                                    <IconButton
+                                        onClick={() => handleDownload(item.id, item.file_name)}
+                                        color="primary"
+                                    >
+                                        <DownloadIcon />
+                                    </IconButton>
+                                    <IconButton
+                                        onClick={() => handleDelete(item.id)}
+                                        color="error"
+                                    >
+                                        <DeleteIcon />
+                                    </IconButton>
+                                </CardActions>
+                            </Card>
+                        </Grid>
+                    );
+                })}
             </Grid>
 
             {/* Popup Dialog for file preview and responsibilities */}
@@ -747,11 +781,25 @@ const PositionDescriptionList: React.FC = () => {
                                                     </TableCell>
                                                     <TableCell align="center">
                                                         <Switch
-                                                            checked={!!llmSwitchStates[resp.id]}
-                                                            onChange={() => handleLlmSwitchChange(resp.id)}
+                                                            checked={!!resp.is_llm_version}
+                                                            onChange={async () => {
+                                                                const newValue = !resp.is_llm_version;
+                                                                // Update backend
+                                                                await fetch(`http://localhost:3000/api/upload/responsibility/${resp.id}`, {
+                                                                    method: 'PUT',
+                                                                    headers: { 'Content-Type': 'application/json' },
+                                                                    body: JSON.stringify({ is_llm_version: newValue })
+                                                                });
+                                                                // Update local state
+                                                                setResponsibilities((prev) =>
+                                                                    prev.map((r) =>
+                                                                        r.id === resp.id ? { ...r, is_llm_version: newValue } : r
+                                                                    )
+                                                                );
+                                                            }}
                                                             color="success"
                                                             inputProps={{ 'aria-label': 'LLM wording toggle' }}
-                                                            sx={{ '& .MuiSwitch-thumb': { bgcolor: llmSwitchStates[resp.id] ? 'success.main' : 'grey.300' } }}
+                                                            sx={{ '& .MuiSwitch-thumb': { bgcolor: resp.is_llm_version ? 'success.main' : 'grey.300' } }}
                                                         />
                                                     </TableCell>
                                                     <TableCell>
@@ -769,12 +817,10 @@ const PositionDescriptionList: React.FC = () => {
                                                         ) : (
                                                             <Box display="flex" alignItems="center">
                                                                 <span>
-                                                                    {llmSwitchStates[resp.id]
-                                                                        ? resp.LLM_Desc || <i style={{ color: '#aaa' }}>[No LLM description]</i>
-                                                                        : resp.responsibility_name}
+                                                                    {resp.is_llm_version ? resp.LLM_Desc || <i style={{ color: '#aaa' }}>[No LLM description]</i> : resp.responsibility_name}
                                                                 </span>
                                                                 <IconButton
-                                                                    onClick={() => handleDescEditStart(resp.id, llmSwitchStates[resp.id] ? resp.LLM_Desc : resp.responsibility_name, llmSwitchStates[resp.id] ? 'llm' : 'original')}
+                                                                    onClick={() => handleDescEditStart(resp.id, resp.is_llm_version ? resp.LLM_Desc : resp.responsibility_name, resp.is_llm_version ? 'llm' : 'original')}
                                                                     sx={{
                                                                         color: 'primary.main',
                                                                         '&:hover': {
@@ -790,16 +836,22 @@ const PositionDescriptionList: React.FC = () => {
                                                         )}
                                                     </TableCell>
                                                     <TableCell>
-                                                        <Slider
-                                                            value={Math.round(resp.responsibility_percentage)}
-                                                            onChange={(_, value) => handleSliderChange(resp.id, value as number)}
-                                                            min={0}
-                                                            max={100}
-                                                            step={1}
-                                                            marks
-                                                            valueLabelDisplay="auto"
-                                                            disabled={totalPercentage >= 100 && resp.responsibility_percentage === 0}
-                                                        />
+                                                        <Box display="flex" alignItems="center" gap={2}>
+                                                            <Slider
+                                                                value={Math.round(resp.responsibility_percentage)}
+                                                                onChange={(_, value) => handleSliderChange(resp.id, value as number)}
+                                                                min={0}
+                                                                max={100}
+                                                                step={1}
+                                                                marks
+                                                                valueLabelDisplay="auto"
+                                                                disabled={totalPercentage >= 100 && resp.responsibility_percentage === 0}
+                                                                sx={{ flexGrow: 1 }}
+                                                            />
+                                                            <Typography variant="body2" sx={{ minWidth: 45, textAlign: 'right' }}>
+                                                                {Math.round(resp.responsibility_percentage)}%
+                                                            </Typography>
+                                                        </Box>
                                                     </TableCell>
                                                 </TableRow>
                                             ))}

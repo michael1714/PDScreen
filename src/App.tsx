@@ -5,9 +5,11 @@ import React, { useState } from 'react';
 import './App.css';
 import PositionDescriptionUpload from './components/PositionDescriptionUpload';
 import PositionDescriptionList from './components/PositionDescriptionList';
+import LandingPage from './pages/LandingPage';
 
 const navLinks = [
-  { label: 'Upload', path: '/' },
+  { label: 'Home', path: '/' },
+  { label: 'Upload', path: '/upload' },
   { label: 'List', path: '/list' },
 ];
 
@@ -70,23 +72,31 @@ function Navigation() {
   );
 }
 
-function App() {
+function AppContent() {
+  const location = useLocation();
   return (
-    <Router>
-      <div className="App">
-        <Navigation />
-        <div className="main-content">
+    <div className="App">
+      {location.pathname !== '/' && <Navigation />}
+      <div className={`main-content${location.pathname === '/' ? ' landing' : ''}`}>
+        {location.pathname === '/' ? (
+          <LandingPage />
+        ) : (
           <Container>
-            <Typography variant="h4" component="h1" gutterBottom>
-              Position Description App
-            </Typography>
             <Routes>
-              <Route path="/" element={<PositionDescriptionUpload />} />
+              <Route path="/upload" element={<PositionDescriptionUpload />} />
               <Route path="/list" element={<PositionDescriptionList />} />
             </Routes>
           </Container>
-        </div>
+        )}
       </div>
+    </div>
+  );
+}
+
+function App() {
+  return (
+    <Router>
+      <AppContent />
     </Router>
   );
 }

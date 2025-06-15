@@ -131,7 +131,7 @@ router.get('/:id/responsibilities', async (req, res) => {
     try {
         const { id } = req.params;
         const result = await pool.query(
-            'SELECT id, responsibility_name, responsibility_percentage, "LLM_Desc" FROM responsibilities WHERE pd_id = $1 ORDER BY id',
+            'SELECT id, responsibility_name, responsibility_percentage, "LLM_Desc", is_llm_version FROM responsibilities WHERE pd_id = $1 ORDER BY id',
             [id]
         );
         res.json(result.rows);
@@ -145,7 +145,16 @@ router.get('/:id/responsibilities', async (req, res) => {
 router.put('/responsibility/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const { responsibility_percentage, responsibility_name, LLM_Desc } = req.body;
+        let { responsibility_percentage, responsibility_name, LLM_Desc, is_llm_version } = req.body;
+        console.log('PUT /responsibility/:id body:', req.body); // Debug log
+        // Defensive: coerce is_llm_version to boolean if present
+        if (is_llm_version !== undefined) {
+            if (typeof is_llm_version === 'string') {
+                is_llm_version = is_llm_version === 'true' || is_llm_version === '1';
+            } else {
+                is_llm_version = !!is_llm_version;
+            }
+        }
         // Build dynamic SQL
         const fields = [];
         const values = [];
@@ -161,6 +170,10 @@ router.put('/responsibility/:id', async (req, res) => {
         if (LLM_Desc !== undefined) {
             fields.push(`"LLM_Desc" = $${idx++}`);
             values.push(LLM_Desc);
+        }
+        if (is_llm_version !== undefined) {
+            fields.push(`is_llm_version = $${idx++}`);
+            values.push(is_llm_version);
         }
         if (fields.length === 0) {
             return res.status(400).json({ error: 'No valid fields to update' });
