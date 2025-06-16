@@ -131,7 +131,7 @@ router.get('/:id/responsibilities', async (req, res) => {
     try {
         const { id } = req.params;
         const result = await pool.query(
-            'SELECT id, responsibility_name, responsibility_percentage, "LLM_Desc", is_llm_version FROM responsibilities WHERE pd_id = $1 ORDER BY id',
+            'SELECT id, responsibility_name, responsibility_percentage, "LLM_Desc", is_llm_version, ai_automation_percentage, ai_automation_reason FROM responsibilities WHERE pd_id = $1 ORDER BY id',
             [id]
         );
         res.json(result.rows);

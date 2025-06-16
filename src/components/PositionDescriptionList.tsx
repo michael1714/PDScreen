@@ -49,6 +49,7 @@ import SortIcon from '@mui/icons-material/Sort';
 import DescriptionIcon from '@mui/icons-material/Description';
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
+import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 
 interface PositionDescription {
     id: number;
@@ -58,6 +59,8 @@ interface PositionDescription {
     status: string;
     department: string;
     updated_at: string;
+    ai_automation_score_sum: number | null;
+    ai_automation_missing_count: number;
 }
 
 const PositionDescriptionList: React.FC = () => {
@@ -645,6 +648,16 @@ const PositionDescriptionList: React.FC = () => {
                                     <Typography variant="h6" component="h2" gutterBottom>
                                         {item.title}
                                     </Typography>
+                                    <Box display="flex" flexDirection="column" alignItems="center" justifyContent="center" gap={1} mb={1}>
+                                        <Typography variant="body2" color="text.secondary">
+                                            AI Score: {item.ai_automation_score_sum !== null && item.ai_automation_score_sum !== undefined ? Number(item.ai_automation_score_sum).toFixed(2) : 'N/A'}
+                                        </Typography>
+                                        {item.ai_automation_missing_count > 0 && (
+                                            <Tooltip title="Not all responsibilities have been assessed for AI automation">
+                                                <WarningAmberIcon color="warning" fontSize="small" />
+                                            </Tooltip>
+                                        )}
+                                    </Box>
                                 </CardContent>
                                 <CardActions>
                                     <Button
@@ -751,6 +764,7 @@ const PositionDescriptionList: React.FC = () => {
                                                 </TableCell>
                                                 <TableCell>Description</TableCell>
                                                 <TableCell style={{ width: '20%' }}>Percentage</TableCell>
+                                                <TableCell style={{ width: '10%' }} align="center">AI</TableCell>
                                             </TableRow>
                                         </TableHead>
                                         <TableBody>
@@ -852,6 +866,19 @@ const PositionDescriptionList: React.FC = () => {
                                                                 {Math.round(resp.responsibility_percentage)}%
                                                             </Typography>
                                                         </Box>
+                                                    </TableCell>
+                                                    <TableCell style={{ width: '10%' }} align="center">
+                                                        <Tooltip 
+                                                            title={resp.ai_automation_reason || "No explanation provided"} 
+                                                            placement="top"
+                                                            arrow
+                                                        >
+                                                            <span>
+                                                                {resp.ai_automation_percentage != null && resp.ai_automation_percentage !== undefined
+                                                                    ? `${Math.round(resp.ai_automation_percentage)}%`
+                                                                    : "Not Yet Assessed"}
+                                                            </span>
+                                                        </Tooltip>
                                                     </TableCell>
                                                 </TableRow>
                                             ))}
