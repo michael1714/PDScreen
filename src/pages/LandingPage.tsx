@@ -60,7 +60,7 @@ const LandingPage: React.FC = () => {
             </div>
             <div className={styles.heroLabel}>AI-POWERED PD MANAGEMENT</div>
             <div className={styles.heroHeadline}>
-              Effortlessly Upload<br />
+              AI Effortlessly Upload<br />
               & Manage <span className={styles.heroAccent}>Position Descriptions</span>
             </div>
             <div className={styles.heroSubheadline}>
