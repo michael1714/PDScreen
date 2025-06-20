@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import { pool, initializeDatabase } from './db/init';
 import uploadRouter from './routes/upload';
+import authRouter from './routes/auth';
 import fs from 'fs';
 
 dotenv.config();
@@ -23,6 +24,7 @@ if (!fs.existsSync('uploads')) {
 initializeDatabase().catch(console.error);
 
 // Routes
+app.use('/api/auth', authRouter);
 app.use('/api/upload', uploadRouter);
 
 // Get content by key
