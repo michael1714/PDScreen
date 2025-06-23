@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
     Box,
     Typography,
@@ -26,13 +27,10 @@ import {
     CardContent,
     CardActions,
     TextField,
-    InputAdornment,
     MenuItem,
     Select,
     FormControl,
     InputLabel,
-    Chip,
-    Stack,
     Grid,
 } from '@mui/material';
 import DownloadIcon from '@mui/icons-material/Download';
@@ -41,15 +39,13 @@ import Slider from '@mui/material/Slider';
 import CloseIcon from '@mui/icons-material/Close';
 import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
 import EditIcon from '@mui/icons-material/Edit';
-import SaveIcon from '@mui/icons-material/Save';
-import CancelIcon from '@mui/icons-material/Cancel';
-import SearchIcon from '@mui/icons-material/Search';
-import FilterListIcon from '@mui/icons-material/FilterList';
-import SortIcon from '@mui/icons-material/Sort';
 import DescriptionIcon from '@mui/icons-material/Description';
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
+import AddIcon from '@mui/icons-material/Add';
+import { useAuth } from '../contexts/AuthContext';
+import apiService from '../services/api';
 
 interface PositionDescription {
     id: number;
@@ -64,6 +60,8 @@ interface PositionDescription {
 }
 
 const PositionDescriptionList: React.FC = () => {
+    const navigate = useNavigate();
+    const { user } = useAuth();
     const [descriptions, setDescriptions] = useState<PositionDescription[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -81,15 +79,12 @@ const PositionDescriptionList: React.FC = () => {
     const [adding, setAdding] = useState(false);
     const [removeDialogOpen, setRemoveDialogOpen] = useState(false);
     const [removingId, setRemovingId] = useState<number | null>(null);
-    const [llmSwitchStates, setLlmSwitchStates] = useState<{ [id: number]: boolean }>({});
     const [llmMasterSwitch, setLlmMasterSwitch] = useState(false);
-    const [llmLoading, setLlmLoading] = useState<{ [id: number]: boolean }>({});
     const [llmConfirmOpen, setLlmConfirmOpen] = useState<{ open: boolean, resp: any | null }>({ open: false, resp: null });
     const [editingDescId, setEditingDescId] = useState<number | null>(null);
     const [editingDescValue, setEditingDescValue] = useState<string>('');
     const [descSaving, setDescSaving] = useState<{ [id: number]: boolean }>({});
     const [editingDescType, setEditingDescType] = useState<'original' | 'llm'>('original');
-    const [searchQuery, setSearchQuery] = useState('');
     const [departmentFilter, setDepartmentFilter] = useState('');
     const [sortBy, setSortBy] = useState('date');
     const [sortOrder, setSortOrder] = useState('desc');
@@ -98,13 +93,11 @@ const PositionDescriptionList: React.FC = () => {
     const POLL_TIMEOUT_MS = 30000;
 
     const fetchDescriptions = async () => {
+        if (!user) return; // Don't fetch if no user
+        setLoading(true);
         try {
-            const response = await fetch('http://localhost:3000/api/upload');
-            if (!response.ok) {
-                throw new Error('Failed to fetch position descriptions');
-            }
-            const data = await response.json();
-            setDescriptions(data);
+            const data = await apiService.get<PositionDescription[]>('/upload');
+            setDescriptions(data.data); // Axios wraps response in a data object
         } catch (err) {
             setError('Failed to load position descriptions');
         } finally {
@@ -114,14 +107,11 @@ const PositionDescriptionList: React.FC = () => {
 
     useEffect(() => {
         fetchDescriptions();
-    }, []);
+    }, [user]); // Re-run when user changes
 
     const handleDownload = async (id: number, fileName: string) => {
         try {
-            const response = await fetch(`http://localhost:3000/api/upload/${id}/download`);
-            if (!response.ok) throw new Error('Download failed');
-            
-            const blob = await response.blob();
+            const blob = await apiService.download(`/upload/${id}/download`);
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
@@ -141,11 +131,7 @@ const PositionDescriptionList: React.FC = () => {
         }
 
         try {
-            const response = await fetch(`http://localhost:3000/api/upload/${id}`, {
-                method: 'DELETE',
-            });
-            if (!response.ok) throw new Error('Delete failed');
-            
+            await apiService.delete(`/upload/${id}`);
             setDescriptions(descriptions.filter(desc => desc.id !== id));
         } catch (err) {
             setError('Failed to delete position description');
@@ -158,14 +144,13 @@ const PositionDescriptionList: React.FC = () => {
         setTabIndex(0);
         setFileUrl(null);
         setFileLoading(true);
-        // Fetch file blob for preview
         try {
-            const response = await fetch(`http://localhost:3000/api/upload/${description.id}/download`);
-            if (!response.ok) throw new Error('Failed to fetch file');
-            const blob = await response.blob();
+            const blob = await apiService.download(`/upload/${description.id}/download`);
             setFileUrl(window.URL.createObjectURL(blob));
         } catch (err) {
+            console.error("File preview error:", err);
             setFileUrl(null);
+            setError('Failed to load file preview.');
         } finally {
             setFileLoading(false);
         }
@@ -198,9 +183,9 @@ const PositionDescriptionList: React.FC = () => {
     useEffect(() => {
         if (dialogOpen && tabIndex === 1 && selectedDescription) {
             setRespLoading(true);
-            fetch(`http://localhost:3000/api/upload/${selectedDescription.id}/responsibilities`)
-                .then(res => res.json())
-                .then(data => {
+            apiService.get<any[]>(`/upload/${selectedDescription.id}/responsibilities`)
+                .then((response: { data: any[] }) => {
+                    const data = response.data; // Axios wraps response
                     setResponsibilities(data);
                     setOriginalResponsibilities(data.map((r: any) => ({ ...r })));
                 })
@@ -228,7 +213,7 @@ const PositionDescriptionList: React.FC = () => {
     // Helper to clamp all responsibilities so total never exceeds 100%
     const clampResponsibilities = (resps: any[]): any[] => {
         let total = 0;
-        return resps.map((resp: any, idx: number) => {
+        return resps.map((resp: any) => {
             const maxAllowed = Math.max(0, 100 - total);
             const clamped = Math.min(resp.responsibility_percentage, maxAllowed);
             total += clamped;
@@ -278,11 +263,7 @@ const PositionDescriptionList: React.FC = () => {
         // Send updates to backend
         await Promise.all(
             changed.map((resp) =>
-                fetch(`http://localhost:3000/api/upload/responsibility/${resp.id}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ responsibility_percentage: Math.round(resp.responsibility_percentage) })
-                })
+                apiService.put(`/upload/responsibility/${resp.id}`, { responsibility_percentage: Math.round(resp.responsibility_percentage) })
             )
         );
         setShowSavePrompt(false);
@@ -292,22 +273,22 @@ const PositionDescriptionList: React.FC = () => {
     };
 
     // Add new responsibility
-    const handleAddNew = async () => {
+    const handleAddNew = () => {
+        navigate('/upload');
+    };
+
+    const handleAddNewResponsibility = async () => {
         if (!selectedDescription || !newRespText.trim()) return;
         setAdding(true);
-        await fetch(`http://localhost:3000/api/upload/${selectedDescription.id}/responsibilities`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ responsibility_name: newRespText.trim() })
-        });
+        await apiService.post(`/upload/${selectedDescription.id}/responsibilities`, { responsibility_name: newRespText.trim() });
         setAddDialogOpen(false);
         setNewRespText('');
         setAdding(false);
         // Refresh responsibilities
         setRespLoading(true);
-        fetch(`http://localhost:3000/api/upload/${selectedDescription.id}/responsibilities`)
-            .then(res => res.json())
-            .then(data => {
+        apiService.get<any[]>(`/upload/${selectedDescription.id}/responsibilities`)
+            .then((response: { data: any[] }) => {
+                const data = response.data; // Axios wraps response
                 setResponsibilities(data);
                 setOriginalResponsibilities(data.map((r: any) => ({ ...r })));
             })
@@ -326,9 +307,7 @@ const PositionDescriptionList: React.FC = () => {
     const handleRemoveConfirm = async () => {
         if (removingId == null) return;
         // Remove from backend
-        await fetch(`http://localhost:3000/api/upload/responsibility/${removingId}`, {
-            method: 'DELETE',
-        });
+        await apiService.delete(`/upload/responsibility/${removingId}`);
         // Remove from UI
         setResponsibilities(responsibilities.filter(r => r.id !== removingId));
         setOriginalResponsibilities(originalResponsibilities.filter(r => r.id !== removingId));
@@ -341,51 +320,17 @@ const PositionDescriptionList: React.FC = () => {
         setRemovingId(null);
     };
 
-    const handleLlmSwitchChange = async (id: number) => {
-        const resp = responsibilities.find(r => r.id === id);
-        if (!resp) return;
-
-        const newValue = !resp.is_llm_version;
-        
-        try {
-            const response = await fetch(`http://localhost:3000/api/upload/responsibility/${id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    is_llm_version: newValue,
-                    responsibility_percentage: resp.responsibility_percentage,
-                    responsibility_name: resp.responsibility_name,
-                    LLM_Desc: resp.LLM_Desc
-                })
-            });
-
-            if (!response.ok) throw new Error('Failed to update responsibility');
-
-            // Update local state
-            setResponsibilities(responsibilities.map(r =>
-                r.id === id ? { ...r, is_llm_version: newValue } : r
-            ));
-        } catch (error) {
-            console.error('Error updating responsibility:', error);
-            // Optionally show an error message to the user
-        }
-    };
-
     const handleLlmMasterSwitchChange = async () => {
         const newValue = !llmMasterSwitch;
         setLlmMasterSwitch(newValue);
         
         // Update all responsibilities in parallel
         await Promise.all(responsibilities.map(resp =>
-            fetch(`http://localhost:3000/api/upload/responsibility/${resp.id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    is_llm_version: newValue,
-                    responsibility_percentage: resp.responsibility_percentage,
-                    responsibility_name: resp.responsibility_name,
-                    LLM_Desc: resp.LLM_Desc
-                })
+            apiService.put(`/upload/responsibility/${resp.id}`, { 
+                is_llm_version: newValue,
+                responsibility_percentage: resp.responsibility_percentage,
+                responsibility_name: resp.responsibility_name,
+                LLM_Desc: resp.LLM_Desc
             })
         ));
 
@@ -408,48 +353,55 @@ const PositionDescriptionList: React.FC = () => {
     const handleLlmConfirm = async () => {
         if (!llmConfirmOpen.resp) return;
         const respId = llmConfirmOpen.resp.id;
-        setLlmLoading((prev) => ({ ...prev, [respId]: true }));
         setLlmConfirmOpen({ open: false, resp: null });
         try {
-            await fetch('https://hook.eu2.make.com/wpuyuxytd4l1cjm0wq21gkso88mabx25', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    id: respId,
-                    description: llmConfirmOpen.resp.responsibility_name,
-                    llm_description: llmConfirmOpen.resp.LLM_Desc
-                })
+            await apiService.post('/hook', {
+                id: respId,
+                description: llmConfirmOpen.resp.responsibility_name,
+                llm_description: llmConfirmOpen.resp.LLM_Desc
             });
             // Start polling for the updated LLM_Desc
             let elapsed = 0;
             const poll = async () => {
                 if (!selectedDescription) return;
-                const res = await fetch(`http://localhost:3000/api/upload/${selectedDescription.id}/responsibilities`);
-                if (!res.ok) return;
-                const data = await res.json();
+                const res = await apiService.get<any[]>(`/upload/${selectedDescription.id}/responsibilities`);
+                if (!res.data.length) return;
+                const data = res.data;
                 const updated = data.find((r: any) => r.id === respId);
                 if (updated && updated.LLM_Desc && updated.LLM_Desc !== llmConfirmOpen.resp.LLM_Desc) {
-                    setResponsibilities(data);
-                    setOriginalResponsibilities(data.map((r: any) => ({ ...r })));
-                    setLlmLoading((prev) => ({ ...prev, [respId]: false }));
-                    setLlmSwitchStates((prev) => ({ ...prev, [respId]: true }));
-                    return;
-                }
-                elapsed += POLL_INTERVAL_MS;
-                if (elapsed < POLL_TIMEOUT_MS) {
+                    // Found update, stop polling and update UI
+                    setResponsibilities((prev) => prev.map((r) => (r.id === respId ? { ...r, LLM_Desc: updated.LLM_Desc } : r)));
+                } else if (elapsed < POLL_TIMEOUT_MS) {
+                    // Continue polling
+                    elapsed += POLL_INTERVAL_MS;
                     setTimeout(poll, POLL_INTERVAL_MS);
                 } else {
-                    setLlmLoading((prev) => ({ ...prev, [respId]: false }));
+                    // Timeout
+                    setError("Timed out waiting for AI description update.");
                 }
             };
             poll();
-        } catch {
-            setLlmLoading((prev) => ({ ...prev, [respId]: false }));
+        } catch (error) {
+            setError('Failed to process with AI');
+            setLlmConfirmOpen({ open: false, resp: null });
         }
     };
 
     const handleLlmCancel = () => {
         setLlmConfirmOpen({ open: false, resp: null });
+        // Refresh responsibilities
+        if (selectedDescription) {
+            apiService.get<any[]>(`/upload/${selectedDescription.id}/responsibilities`)
+                .then((response: { data: any[] }) => {
+                    const data = response.data; // Axios wraps response
+                    setResponsibilities(data);
+                    setOriginalResponsibilities(data.map((r: any) => ({ ...r })));
+                })
+                .catch(() => {
+                    setResponsibilities([]);
+                    setOriginalResponsibilities([]);
+                });
+        }
     };
 
     const handleCloseClick = () => {
@@ -477,25 +429,25 @@ const PositionDescriptionList: React.FC = () => {
         let url = '';
         let body: any = {};
         if (editingDescType === 'llm') {
-            url = `http://localhost:3000/api/upload/responsibility/${id}`;
+            url = `/upload/responsibility/${id}`;
             body = { LLM_Desc: editingDescValue };
         } else {
-            url = `http://localhost:3000/api/upload/responsibility/${id}`;
+            url = `/upload/responsibility/${id}`;
             body = { responsibility_name: editingDescValue };
         }
-        await fetch(url, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body)
-        });
+        await apiService.put(url, body);
         // Refresh responsibilities
         if (selectedDescription) {
-            const res = await fetch(`http://localhost:3000/api/upload/${selectedDescription.id}/responsibilities`);
-            if (res.ok) {
-                const data = await res.json();
-                setResponsibilities(data);
-                setOriginalResponsibilities(data.map((r: any) => ({ ...r })));
-            }
+            apiService.get<any[]>(`/upload/${selectedDescription.id}/responsibilities`)
+                .then((response: { data: any[] }) => {
+                    const data = response.data; // Axios wraps response
+                    setResponsibilities(data);
+                    setOriginalResponsibilities(data.map((r: any) => ({ ...r })));
+                })
+                .catch(() => {
+                    setResponsibilities([]);
+                    setOriginalResponsibilities([]);
+                });
         }
         setDescSaving((prev) => ({ ...prev, [id]: false }));
         setEditingDescId(null);
@@ -514,14 +466,6 @@ const PositionDescriptionList: React.FC = () => {
     // Add filter and sort logic
     const filteredAndSortedData = useMemo(() => {
         let filtered = [...descriptions];
-        
-        // Apply search
-        if (searchQuery) {
-            filtered = filtered.filter(item => 
-                item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                item.department.toLowerCase().includes(searchQuery.toLowerCase())
-            );
-        }
         
         // Apply department filter
         if (departmentFilter) {
@@ -543,7 +487,7 @@ const PositionDescriptionList: React.FC = () => {
         });
         
         return filtered;
-    }, [descriptions, searchQuery, departmentFilter, sortBy, sortOrder]);
+    }, [descriptions, departmentFilter, sortBy, sortOrder]);
 
     // Get unique departments for filter
     const departments = useMemo(() => 
@@ -621,22 +565,16 @@ const PositionDescriptionList: React.FC = () => {
             </Box>
 
             {/* Cards Grid */}
-            <Grid container spacing={3}>
+            <Grid container spacing={4} sx={{ padding: '32px' }} alignItems="stretch">
                 {filteredAndSortedData.map((item) => {
-                    let dateLabel = '—';
-                    if (item.updated_at) {
-                        const d = new Date(item.updated_at);
-                        if (!isNaN(d.getTime())) {
-                            dateLabel = d.toLocaleDateString();
-                        }
-                    }
                     return (
-                        <Grid item xs={12} sm={6} md={4} key={item.id} component="div">
+                        <Grid item xs={12} sm={6} md={4} lg={3} key={item.id}>
                             <Card 
-                                sx={{ 
-                                    height: '100%',
+                                sx={{
+                                    height: '100%', // Use 100% to fill the stretched grid item
                                     display: 'flex',
                                     flexDirection: 'column',
+                                    justifyContent: 'space-between', // Distributes content
                                     transition: 'transform 0.2s, box-shadow 0.2s',
                                     '&:hover': {
                                         transform: 'translateY(-4px)',
@@ -644,7 +582,7 @@ const PositionDescriptionList: React.FC = () => {
                                     }
                                 }}
                             >
-                                <CardContent sx={{ flexGrow: 1 }}>
+                                <CardContent>
                                     <Typography variant="h6" component="h2" gutterBottom>
                                         {item.title}
                                     </Typography>
@@ -684,6 +622,37 @@ const PositionDescriptionList: React.FC = () => {
                         </Grid>
                     );
                 })}
+                <Grid item xs={12} sm={6} md={4} lg={3}>
+                    <Card 
+                        sx={{
+                            height: '100%', // Use 100% to fill the stretched grid item
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center', // Center content horizontally
+                            justifyContent: 'center', // Center content vertically
+                            transition: 'transform 0.2s, box-shadow 0.2s',
+                            cursor: 'pointer',
+                            border: '2px dashed #ccc',
+                            '&:hover': {
+                                transform: 'translateY(-4px)',
+                                boxShadow: 3,
+                                border: '2px dashed #1976d2',
+                                backgroundColor: '#f5f5f5'
+                            }
+                        }}
+                        onClick={handleAddNew}
+                    >
+                        <CardContent sx={{ textAlign: 'center' }}>
+                            <AddIcon sx={{ fontSize: 60, color: 'primary.main', mb: 2 }} />
+                            <Typography variant="h6" component="h2" gutterBottom color="primary">
+                                Add New Position Description
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                                Upload a new position description file
+                            </Typography>
+                        </CardContent>
+                    </Card>
+                </Grid>
             </Grid>
 
             {/* Popup Dialog for file preview and responsibilities */}
@@ -799,11 +768,7 @@ const PositionDescriptionList: React.FC = () => {
                                                             onChange={async () => {
                                                                 const newValue = !resp.is_llm_version;
                                                                 // Update backend
-                                                                await fetch(`http://localhost:3000/api/upload/responsibility/${resp.id}`, {
-                                                                    method: 'PUT',
-                                                                    headers: { 'Content-Type': 'application/json' },
-                                                                    body: JSON.stringify({ is_llm_version: newValue })
-                                                                });
+                                                                await apiService.put(`/upload/responsibility/${resp.id}`, { is_llm_version: newValue });
                                                                 // Update local state
                                                                 setResponsibilities((prev) =>
                                                                     prev.map((r) =>
@@ -932,7 +897,7 @@ const PositionDescriptionList: React.FC = () => {
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={() => setAddDialogOpen(false)} color="secondary" disabled={adding}>Cancel</Button>
-                    <Button onClick={handleAddNew} color="primary" disabled={adding || !newRespText.trim()}>
+                    <Button onClick={handleAddNewResponsibility} color="primary" disabled={adding || !newRespText.trim()}>
                         {adding ? 'Adding...' : 'Add'}
                     </Button>
                 </DialogActions>
