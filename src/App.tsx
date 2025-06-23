@@ -10,9 +10,11 @@ import WelcomePage from './pages/WelcomePage';
 import PasswordResetPage from './pages/PasswordResetPage';
 import PositionDescriptionList from './components/PositionDescriptionList';
 import PositionDescriptionUpload from './components/PositionDescriptionUpload';
+import AdminPage from './components/AdminPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import SessionWarning from './components/SessionWarning';
 import Navigation from './components/Navigation';
+import MainLayout from './components/MainLayout';
 import './App.css';
 
 const theme = createTheme({
@@ -30,7 +32,7 @@ const theme = createTheme({
 const AppContent: React.FC = () => {
   const { isAuthenticated, loading } = useAuth();
   const location = useLocation();
-  const shouldShowNav = isAuthenticated && !['/', '/login', '/register', '/welcome'].includes(location.pathname);
+  const shouldShowNav = false;
   const isLandingTypePage = ['/', '/login', '/register', '/welcome'].includes(location.pathname);
 
   if (loading) {
@@ -39,7 +41,6 @@ const AppContent: React.FC = () => {
 
   return (
     <div className="App">
-      {shouldShowNav && <Navigation />}
       <div className={`main-content${isLandingTypePage ? ' landing' : ''}`}>
         <SessionWarning />
         <Routes>
@@ -52,7 +53,9 @@ const AppContent: React.FC = () => {
             path="/list" 
             element={
               <ProtectedRoute>
-                <PositionDescriptionList />
+                <MainLayout pageTitle="Position Descriptions">
+                  <PositionDescriptionList />
+                </MainLayout>
               </ProtectedRoute>
             } 
           />
@@ -60,7 +63,19 @@ const AppContent: React.FC = () => {
             path="/upload" 
             element={
               <ProtectedRoute>
-                <PositionDescriptionUpload />
+                <MainLayout pageTitle="Upload Position Description">
+                  <PositionDescriptionUpload />
+                </MainLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/admin" 
+            element={
+              <ProtectedRoute>
+                <MainLayout pageTitle="Admin Dashboard">
+                  <AdminPage />
+                </MainLayout>
               </ProtectedRoute>
             } 
           />

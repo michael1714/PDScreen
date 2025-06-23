@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useContext, createContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     Box,
@@ -88,6 +88,10 @@ const PositionDescriptionList: React.FC = () => {
     const [departmentFilter, setDepartmentFilter] = useState('');
     const [sortBy, setSortBy] = useState('date');
     const [sortOrder, setSortOrder] = useState('desc');
+    const departments = useMemo(() => Array.from(new Set(descriptions.map(item => item.department))), [descriptions]);
+    const toggleSortOrder = () => {
+        setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
+    };
 
     const POLL_INTERVAL_MS = 1500;
     const POLL_TIMEOUT_MS = 30000;
@@ -507,16 +511,6 @@ const PositionDescriptionList: React.FC = () => {
         return sorted;
     }, [descriptions, sortBy, sortOrder, departmentFilter]);
 
-    // Get unique departments for filter
-    const departments = useMemo(() => 
-        Array.from(new Set(descriptions.map(item => item.department))),
-        [descriptions]
-    );
-
-    const toggleSortOrder = () => {
-        setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
-    };
-
     if (loading) {
         return (
             <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
@@ -526,238 +520,291 @@ const PositionDescriptionList: React.FC = () => {
     }
 
     return (
-        <Box sx={{ maxWidth: 1600, mx: 'auto', mt: 4, p: 3 }}>
-            <Typography variant="h4" component="h1">
-                Position Descriptions
-            </Typography>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <FormControl variant="outlined" sx={{ minWidth: 220 }}>
-                    <InputLabel id="department-filter-label">Department</InputLabel>
-                    <Select
-                        labelId="department-filter-label"
-                        value={departmentFilter}
-                        onChange={(e) => setDepartmentFilter(e.target.value)}
-                        label="Department"
+        <>
+            <Box sx={{ maxWidth: 1600, mx: 'auto', mt: 4, p: 3 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <FormControl variant="outlined" sx={{ minWidth: 220 }}>
+                        <InputLabel id="department-filter-label">Department</InputLabel>
+                        <Select
+                            labelId="department-filter-label"
+                            value={departmentFilter}
+                            onChange={(e) => setDepartmentFilter(e.target.value)}
+                            label="Department"
+                        >
+                            <MenuItem value="">All Departments</MenuItem>
+                            {departments.map(dept => (
+                                <MenuItem key={dept} value={dept}>{dept}</MenuItem>
+                            ))}
+                        </Select>
+                    </FormControl>
+
+                    <FormControl variant="outlined" sx={{ width: 220 }}>
+                        <InputLabel id="sort-by-label">Sort By</InputLabel>
+                        <Select
+                            labelId="sort-by-label"
+                            value={sortBy}
+                            onChange={(e) => setSortBy(e.target.value)}
+                            label="Sort By"
+                            sx={{ textAlign: 'left' }}
+                        >
+                            <MenuItem value="date" sx={{ justifyContent: 'flex-start' }}>Date</MenuItem>
+                            <MenuItem value="title" sx={{ justifyContent: 'flex-start' }}>Title</MenuItem>
+                            <MenuItem value="status" sx={{ justifyContent: 'flex-start' }}>Status</MenuItem>
+                        </Select>
+                    </FormControl>
+
+                    <Button
+                        variant="outlined"
+                        onClick={toggleSortOrder}
+                        sx={{ minWidth: 60, height: 56 }}
+                        aria-label={sortOrder === 'asc' ? 'Sort ascending' : 'Sort descending'}
                     >
-                        <MenuItem value="">All Departments</MenuItem>
-                        {departments.map(dept => (
-                            <MenuItem key={dept} value={dept}>{dept}</MenuItem>
-                        ))}
-                    </Select>
-                </FormControl>
+                        {sortOrder === 'asc' ? <ArrowUpwardIcon /> : <ArrowDownwardIcon />}
+                    </Button>
+                </Box>
 
-                <FormControl variant="outlined" sx={{ width: 220 }}>
-                    <InputLabel id="sort-by-label">Sort By</InputLabel>
-                    <Select
-                        labelId="sort-by-label"
-                        value={sortBy}
-                        onChange={(e) => setSortBy(e.target.value)}
-                        label="Sort By"
-                        sx={{ textAlign: 'left' }}
-                    >
-                        <MenuItem value="date" sx={{ justifyContent: 'flex-start' }}>Date</MenuItem>
-                        <MenuItem value="title" sx={{ justifyContent: 'flex-start' }}>Title</MenuItem>
-                        <MenuItem value="status" sx={{ justifyContent: 'flex-start' }}>Status</MenuItem>
-                    </Select>
-                </FormControl>
+                {error && (
+                    <Alert severity="error" sx={{ mb: 2 }}>
+                        {error}
+                    </Alert>
+                )}
 
-                <Button
-                    variant="outlined"
-                    onClick={toggleSortOrder}
-                    sx={{ minWidth: 60, height: 56 }}
-                    aria-label={sortOrder === 'asc' ? 'Sort ascending' : 'Sort descending'}
-                >
-                    {sortOrder === 'asc' ? <ArrowUpwardIcon /> : <ArrowDownwardIcon />}
-                </Button>
-            </Box>
-
-            {error && (
-                <Alert severity="error" sx={{ mb: 2 }}>
-                    {error}
-                </Alert>
-            )}
-
-            {/* Cards Grid */}
-            <Grid container spacing={4} sx={{ padding: '32px' }} alignItems="stretch">
-                {filteredAndSortedDescriptions.map((item) => {
-                    return (
-                        <Grid item xs={12} sm={6} md={4} lg={3} key={item.id}>
-                            <Card 
-                                sx={{
-                                    height: '100%', // Use 100% to fill the stretched grid item
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    justifyContent: 'space-between', // Distributes content
-                                    transition: 'transform 0.2s, box-shadow 0.2s',
-                                    '&:hover': {
-                                        transform: 'translateY(-4px)',
-                                        boxShadow: 3
-                                    }
-                                }}
-                            >
-                                <CardContent>
-                                    <Typography variant="h6" component="h2" gutterBottom>
-                                        {item.title}
-                                    </Typography>
-                                    <Box display="flex" flexDirection="column" alignItems="center" justifyContent="center" gap={1} mb={1}>
-                                        <Typography variant="body2" color="text.secondary">
-                                            AI Score: {item.ai_automation_score_sum !== null && item.ai_automation_score_sum !== undefined ? Number(item.ai_automation_score_sum).toFixed(2) : 'N/A'}
-                                        </Typography>
-                                        {item.ai_automation_missing_count > 0 && (
-                                            <Tooltip title="Not all responsibilities have been assessed for AI automation">
-                                                <WarningAmberIcon color="warning" fontSize="small" />
-                                            </Tooltip>
-                                        )}
-                                    </Box>
-                                </CardContent>
-                                <CardActions>
-                                    <Button
-                                        size="small"
-                                        onClick={() => handleFileNameClick(item)}
-                                        startIcon={<DescriptionIcon />}
-                                    >
-                                        View Details
-                                    </Button>
-                                    <IconButton
-                                        onClick={() => handleDownload(item.id, item.file_name)}
-                                        color="primary"
-                                    >
-                                        <DownloadIcon />
-                                    </IconButton>
-                                    <IconButton
-                                        onClick={() => handleDelete(item.id)}
-                                        color="error"
-                                    >
-                                        <DeleteIcon />
-                                    </IconButton>
-                                </CardActions>
-                            </Card>
-                        </Grid>
-                    );
-                })}
-                <Grid item xs={12} sm={6} md={4} lg={3}>
-                    <Card 
-                        sx={{
-                            height: '100%', // Use 100% to fill the stretched grid item
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'center', // Center content horizontally
-                            justifyContent: 'center', // Center content vertically
-                            transition: 'transform 0.2s, box-shadow 0.2s',
-                            cursor: 'pointer',
-                            border: '2px dashed #ccc',
-                            '&:hover': {
-                                transform: 'translateY(-4px)',
-                                boxShadow: 3,
-                                border: '2px dashed #1976d2',
-                                backgroundColor: '#f5f5f5'
-                            }
-                        }}
-                        onClick={handleAddNew}
-                    >
-                        <CardContent sx={{ textAlign: 'center' }}>
-                            <AddIcon sx={{ fontSize: 60, color: 'primary.main', mb: 2 }} />
-                            <Typography variant="h6" component="h2" gutterBottom color="primary">
-                                Add New Position Description
-                            </Typography>
-                            <Typography variant="body2" color="text.secondary">
-                                Upload a new position description file
-                            </Typography>
-                        </CardContent>
-                    </Card>
-                </Grid>
-            </Grid>
-
-            {/* Popup Dialog for file preview and responsibilities */}
-            <Dialog open={dialogOpen} onClose={handleDialogClose} maxWidth="md" fullWidth>
-                <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <span>{selectedDescription?.title}</span>
-                    <IconButton aria-label="close" onClick={handleCloseClick} sx={{ color: 'error.main' }}>
-                        <CloseIcon />
-                    </IconButton>
-                </DialogTitle>
-                <DialogContent>
-                    <Tabs value={tabIndex} onChange={handleTabChange} sx={{ mb: 2 }}>
-                        <Tab label="Preview" />
-                        <Tab label="Responsibilities" />
-                    </Tabs>
-                    {tabIndex === 0 && (
-                        <Box sx={{ minHeight: 400 }}>
-                            {fileLoading ? (
-                                <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
-                                    <CircularProgress />
-                                </Box>
-                            ) : fileUrl ? (
-                                selectedDescription?.file_name.toLowerCase().endsWith('.pdf') ? (
-                                    <iframe
-                                        src={fileUrl}
-                                        title="PDF Preview"
-                                        width="100%"
-                                        height="500px"
-                                        style={{ border: 'none' }}
-                                    />
-                                ) : (
-                                    <Typography variant="body2" color="text.secondary">
-                                        Preview not available for this file type.<br />
-                                        <a href={fileUrl} target="_blank" rel="noopener noreferrer">Download file</a> to view.
-                                    </Typography>
-                                )
-                            ) : (
-                                <Typography variant="body2" color="text.secondary">
-                                    No preview available.
-                                </Typography>
-                            )}
-                        </Box>
-                    )}
-                    {tabIndex === 1 && (
-                        <Box sx={{ minHeight: 400, p: 2 }}>
-                            <Box mb={3} display="flex" justifyContent="flex-end">
-                                <Typography
-                                    variant="h5"
+                {/* Cards Grid */}
+                <Grid container spacing={4} sx={{ padding: '32px' }} alignItems="stretch">
+                    {filteredAndSortedDescriptions.map((item) => {
+                        return (
+                            <Grid item xs={12} sm={6} md={4} lg={3} key={item.id}>
+                                <Card 
                                     sx={{
-                                        color: totalPercentage > 100 ? 'error.main' : 'primary.main',
-                                        fontWeight: 700,
-                                        fontSize: '1.5rem',
-                                        textAlign: 'right',
+                                        height: '100%', // Use 100% to fill the stretched grid item
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        justifyContent: 'space-between', // Distributes content
+                                        transition: 'transform 0.2s, box-shadow 0.2s',
+                                        '&:hover': {
+                                            transform: 'translateY(-4px)',
+                                            boxShadow: 3
+                                        }
                                     }}
                                 >
-                                    Total: {Math.round(totalPercentage)}%
+                                    <CardContent>
+                                        <Typography variant="h6" component="h2" gutterBottom>
+                                            {item.title}
+                                        </Typography>
+                                        <Box display="flex" flexDirection="column" alignItems="center" justifyContent="center" gap={1} mb={1}>
+                                            <Typography variant="body2" color="text.secondary">
+                                                AI Score: {item.ai_automation_score_sum !== null && item.ai_automation_score_sum !== undefined ? Number(item.ai_automation_score_sum).toFixed(2) : 'N/A'}
+                                            </Typography>
+                                            {item.ai_automation_missing_count > 0 && (
+                                                <Tooltip title="Not all responsibilities have been assessed for AI automation">
+                                                    <WarningAmberIcon color="warning" fontSize="small" />
+                                                </Tooltip>
+                                            )}
+                                        </Box>
+                                    </CardContent>
+                                    <CardActions>
+                                        <Button
+                                            size="small"
+                                            onClick={() => handleFileNameClick(item)}
+                                            startIcon={<DescriptionIcon />}
+                                        >
+                                            View Details
+                                        </Button>
+                                        <IconButton
+                                            onClick={() => handleDownload(item.id, item.file_name)}
+                                            color="primary"
+                                        >
+                                            <DownloadIcon />
+                                        </IconButton>
+                                        <IconButton
+                                            onClick={() => handleDelete(item.id)}
+                                            color="error"
+                                        >
+                                            <DeleteIcon />
+                                        </IconButton>
+                                    </CardActions>
+                                </Card>
+                            </Grid>
+                        );
+                    })}
+                    <Grid item xs={12} sm={6} md={4} lg={3}>
+                        <Card 
+                            sx={{
+                                height: '100%', // Use 100% to fill the stretched grid item
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center', // Center content horizontally
+                                justifyContent: 'center', // Center content vertically
+                                transition: 'transform 0.2s, box-shadow 0.2s',
+                                cursor: 'pointer',
+                                border: '2px dashed #ccc',
+                                '&:hover': {
+                                    transform: 'translateY(-4px)',
+                                    boxShadow: 3,
+                                    border: '2px dashed #1976d2',
+                                    backgroundColor: '#f5f5f5'
+                                }
+                            }}
+                            onClick={handleAddNew}
+                        >
+                            <CardContent sx={{ textAlign: 'center' }}>
+                                <AddIcon sx={{ fontSize: 60, color: 'primary.main', mb: 2 }} />
+                                <Typography variant="h6" component="h2" gutterBottom color="primary">
+                                    Add New Position Description
                                 </Typography>
+                                <Typography variant="body2" color="text.secondary">
+                                    Upload a new position description file
+                                </Typography>
+                            </CardContent>
+                        </Card>
+                    </Grid>
+                </Grid>
+
+                {/* Popup Dialog for file preview and responsibilities */}
+                <Dialog open={dialogOpen} onClose={handleDialogClose} maxWidth="md" fullWidth>
+                    <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <span>{selectedDescription?.title}</span>
+                        <IconButton aria-label="close" onClick={handleCloseClick} sx={{ color: 'error.main' }}>
+                            <CloseIcon />
+                        </IconButton>
+                    </DialogTitle>
+                    <DialogContent>
+                        <Tabs value={tabIndex} onChange={handleTabChange} sx={{ mb: 2 }}>
+                            <Tab label="Preview" />
+                            <Tab label="Responsibilities" />
+                        </Tabs>
+                        {tabIndex === 0 && (
+                            <Box sx={{ minHeight: 400 }}>
+                                {fileLoading ? (
+                                    <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
+                                        <CircularProgress />
+                                    </Box>
+                                ) : fileUrl ? (
+                                    selectedDescription?.file_name.toLowerCase().endsWith('.pdf') ? (
+                                        <iframe
+                                            src={fileUrl}
+                                            title="PDF Preview"
+                                            width="100%"
+                                            height="500px"
+                                            style={{ border: 'none' }}
+                                        />
+                                    ) : (
+                                        <Typography variant="body2" color="text.secondary">
+                                            Preview not available for this file type.<br />
+                                            <a href={fileUrl} target="_blank" rel="noopener noreferrer">Download file</a> to view.
+                                        </Typography>
+                                    )
+                                ) : (
+                                    <Typography variant="body2" color="text.secondary">
+                                        No preview available.
+                                    </Typography>
+                                )}
                             </Box>
-                            {respLoading ? (
-                                <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
-                                    <CircularProgress />
+                        )}
+                        {tabIndex === 1 && (
+                            <Box sx={{ minHeight: 400, p: 2 }}>
+                                <Box mb={3} display="flex" justifyContent="flex-end">
+                                    <Typography
+                                        variant="h5"
+                                        sx={{
+                                            color: totalPercentage > 100 ? 'error.main' : 'primary.main',
+                                            fontWeight: 700,
+                                            fontSize: '1.5rem',
+                                            textAlign: 'right',
+                                        }}
+                                    >
+                                        Total: {Math.round(totalPercentage)}%
+                                    </Typography>
                                 </Box>
-                            ) : responsibilities.length > 0 ? (
-                                <TableContainer component={Paper}>
-                                    <Table size="small">
-                                        <TableHead>
-                                            <TableRow>
-                                                <TableCell style={{ width: '5%' }} />
-                                                <TableCell style={{ width: '10%' }} align="center">
-                                                    LLM Response
-                                                    <Switch
-                                                        checked={llmMasterSwitch}
-                                                        onChange={handleLlmMasterSwitchChange}
-                                                        color="success"
-                                                        size="small"
-                                                        inputProps={{ 'aria-label': 'Toggle all LLM responses' }}
-                                                    />
-                                                </TableCell>
-                                                <TableCell>Description</TableCell>
-                                                <TableCell style={{ width: '20%' }}>Percentage</TableCell>
-                                                <TableCell style={{ width: '10%' }} align="center">AI</TableCell>
-                                            </TableRow>
-                                        </TableHead>
-                                        <TableBody>
-                                            {responsibilities.map((resp) => (
-                                                <TableRow key={resp.id}>
-                                                    <TableCell>
-                                                        <Box display="flex" alignItems="center" justifyContent="center" gap={1}>
-                                                            <Tooltip title="Ask the LLM to rewrite this responsibility?">
-                                                                <span>
+                                {respLoading ? (
+                                    <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
+                                        <CircularProgress />
+                                    </Box>
+                                ) : responsibilities.length > 0 ? (
+                                    <TableContainer component={Paper}>
+                                        <Table size="small">
+                                            <TableHead>
+                                                <TableRow>
+                                                    <TableCell style={{ width: '5%' }} />
+                                                    <TableCell style={{ width: '10%' }} align="center">
+                                                        LLM Response
+                                                        <Switch
+                                                            checked={llmMasterSwitch}
+                                                            onChange={handleLlmMasterSwitchChange}
+                                                            color="success"
+                                                            size="small"
+                                                            inputProps={{ 'aria-label': 'Toggle all LLM responses' }}
+                                                        />
+                                                    </TableCell>
+                                                    <TableCell>Description</TableCell>
+                                                    <TableCell style={{ width: '20%' }}>Percentage</TableCell>
+                                                    <TableCell style={{ width: '10%' }} align="center">AI</TableCell>
+                                                </TableRow>
+                                            </TableHead>
+                                            <TableBody>
+                                                {responsibilities.map((resp) => (
+                                                    <TableRow key={resp.id}>
+                                                        <TableCell>
+                                                            <Box display="flex" alignItems="center" justifyContent="center" gap={1}>
+                                                                <Tooltip title="Ask the LLM to rewrite this responsibility?">
+                                                                    <span>
+                                                                        <IconButton
+                                                                            onClick={e => { e.preventDefault(); handleLlmIconClick(resp); }}
+                                                                            sx={{
+                                                                                color: 'primary.main',
+                                                                                '&:hover': {
+                                                                                    backgroundColor: 'primary.light',
+                                                                                    color: 'primary.contrastText'
+                                                                                }
+                                                                            }}
+                                                                        >
+                                                                            <AutoFixHighIcon />
+                                                                        </IconButton>
+                                                                    </span>
+                                                                </Tooltip>
+                                                                <Link href="#" color="inherit" onClick={e => { e.preventDefault(); handleRemoveClick(resp.id); }}>
+                                                                    <img src="/x-icon.png" alt="X" style={{ width: 32, height: 32 }} />
+                                                                </Link>
+                                                            </Box>
+                                                        </TableCell>
+                                                        <TableCell align="center">
+                                                            <Switch
+                                                                checked={!!resp.is_llm_version}
+                                                                onChange={async () => {
+                                                                    const newValue = !resp.is_llm_version;
+                                                                    // Update backend
+                                                                    await apiService.put(`/upload/responsibility/${resp.id}`, { is_llm_version: newValue });
+                                                                    // Update local state
+                                                                    setResponsibilities((prev) =>
+                                                                        prev.map((r) =>
+                                                                            r.id === resp.id ? { ...r, is_llm_version: newValue } : r
+                                                                        )
+                                                                    );
+                                                                }}
+                                                                color="success"
+                                                                inputProps={{ 'aria-label': 'LLM wording toggle' }}
+                                                                sx={{ '& .MuiSwitch-thumb': { bgcolor: resp.is_llm_version ? 'success.main' : 'grey.300' } }}
+                                                            />
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            {editingDescId === resp.id ? (
+                                                                <TextField
+                                                                    value={editingDescValue}
+                                                                    onChange={handleDescEditChange}
+                                                                    onBlur={() => handleDescEditSave(resp.id)}
+                                                                    onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => handleDescEditKeyDown(e, resp.id)}
+                                                                    size="small"
+                                                                    autoFocus
+                                                                    disabled={descSaving[resp.id]}
+                                                                    fullWidth
+                                                                />
+                                                            ) : (
+                                                                <Box display="flex" alignItems="center">
+                                                                    <span>
+                                                                        {resp.is_llm_version ? resp.LLM_Desc || <i style={{ color: '#aaa' }}>[No LLM description]</i> : resp.responsibility_name}
+                                                                    </span>
                                                                     <IconButton
-                                                                        onClick={e => { e.preventDefault(); handleLlmIconClick(resp); }}
+                                                                        onClick={() => handleDescEditStart(resp.id, resp.is_llm_version ? resp.LLM_Desc : resp.responsibility_name, resp.is_llm_version ? 'llm' : 'original')}
                                                                         sx={{
                                                                             color: 'primary.main',
                                                                             '&:hover': {
@@ -766,177 +813,123 @@ const PositionDescriptionList: React.FC = () => {
                                                                             }
                                                                         }}
                                                                     >
-                                                                        <AutoFixHighIcon />
+                                                                        <EditIcon />
                                                                     </IconButton>
+                                                                    {descSaving[resp.id] && <CircularProgress size={18} sx={{ ml: 1 }} />}
+                                                                </Box>
+                                                            )}
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <Box display="flex" alignItems="center" gap={2}>
+                                                                <Slider
+                                                                    value={Math.round(resp.responsibility_percentage)}
+                                                                    onChange={(_, value) => handleSliderChange(resp.id, value as number)}
+                                                                    min={0}
+                                                                    max={100}
+                                                                    step={1}
+                                                                    marks
+                                                                    valueLabelDisplay="auto"
+                                                                    disabled={totalPercentage >= 100 && resp.responsibility_percentage === 0}
+                                                                    sx={{ flexGrow: 1 }}
+                                                                />
+                                                                <Typography variant="body2" sx={{ minWidth: 45, textAlign: 'right' }}>
+                                                                    {Math.round(resp.responsibility_percentage)}%
+                                                                </Typography>
+                                                            </Box>
+                                                        </TableCell>
+                                                        <TableCell style={{ width: '10%' }} align="center">
+                                                            <Tooltip 
+                                                                title={resp.ai_automation_reason || "No explanation provided"} 
+                                                                placement="top"
+                                                                arrow
+                                                            >
+                                                                <span>
+                                                                    {resp.ai_automation_percentage != null && resp.ai_automation_percentage !== undefined
+                                                                        ? `${Math.round(resp.ai_automation_percentage)}%`
+                                                                        : "Not Yet Assessed"}
                                                                 </span>
                                                             </Tooltip>
-                                                            <Link href="#" color="inherit" onClick={e => { e.preventDefault(); handleRemoveClick(resp.id); }}>
-                                                                <img src="/x-icon.png" alt="X" style={{ width: 32, height: 32 }} />
-                                                            </Link>
-                                                        </Box>
-                                                    </TableCell>
-                                                    <TableCell align="center">
-                                                        <Switch
-                                                            checked={!!resp.is_llm_version}
-                                                            onChange={async () => {
-                                                                const newValue = !resp.is_llm_version;
-                                                                // Update backend
-                                                                await apiService.put(`/upload/responsibility/${resp.id}`, { is_llm_version: newValue });
-                                                                // Update local state
-                                                                setResponsibilities((prev) =>
-                                                                    prev.map((r) =>
-                                                                        r.id === resp.id ? { ...r, is_llm_version: newValue } : r
-                                                                    )
-                                                                );
-                                                            }}
-                                                            color="success"
-                                                            inputProps={{ 'aria-label': 'LLM wording toggle' }}
-                                                            sx={{ '& .MuiSwitch-thumb': { bgcolor: resp.is_llm_version ? 'success.main' : 'grey.300' } }}
-                                                        />
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        {editingDescId === resp.id ? (
-                                                            <TextField
-                                                                value={editingDescValue}
-                                                                onChange={handleDescEditChange}
-                                                                onBlur={() => handleDescEditSave(resp.id)}
-                                                                onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => handleDescEditKeyDown(e, resp.id)}
-                                                                size="small"
-                                                                autoFocus
-                                                                disabled={descSaving[resp.id]}
-                                                                fullWidth
-                                                            />
-                                                        ) : (
-                                                            <Box display="flex" alignItems="center">
-                                                                <span>
-                                                                    {resp.is_llm_version ? resp.LLM_Desc || <i style={{ color: '#aaa' }}>[No LLM description]</i> : resp.responsibility_name}
-                                                                </span>
-                                                                <IconButton
-                                                                    onClick={() => handleDescEditStart(resp.id, resp.is_llm_version ? resp.LLM_Desc : resp.responsibility_name, resp.is_llm_version ? 'llm' : 'original')}
-                                                                    sx={{
-                                                                        color: 'primary.main',
-                                                                        '&:hover': {
-                                                                            backgroundColor: 'primary.light',
-                                                                            color: 'primary.contrastText'
-                                                                        }
-                                                                    }}
-                                                                >
-                                                                    <EditIcon />
-                                                                </IconButton>
-                                                                {descSaving[resp.id] && <CircularProgress size={18} sx={{ ml: 1 }} />}
-                                                            </Box>
-                                                        )}
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        <Box display="flex" alignItems="center" gap={2}>
-                                                            <Slider
-                                                                value={Math.round(resp.responsibility_percentage)}
-                                                                onChange={(_, value) => handleSliderChange(resp.id, value as number)}
-                                                                min={0}
-                                                                max={100}
-                                                                step={1}
-                                                                marks
-                                                                valueLabelDisplay="auto"
-                                                                disabled={totalPercentage >= 100 && resp.responsibility_percentage === 0}
-                                                                sx={{ flexGrow: 1 }}
-                                                            />
-                                                            <Typography variant="body2" sx={{ minWidth: 45, textAlign: 'right' }}>
-                                                                {Math.round(resp.responsibility_percentage)}%
-                                                            </Typography>
-                                                        </Box>
-                                                    </TableCell>
-                                                    <TableCell style={{ width: '10%' }} align="center">
-                                                        <Tooltip 
-                                                            title={resp.ai_automation_reason || "No explanation provided"} 
-                                                            placement="top"
-                                                            arrow
-                                                        >
-                                                            <span>
-                                                                {resp.ai_automation_percentage != null && resp.ai_automation_percentage !== undefined
-                                                                    ? `${Math.round(resp.ai_automation_percentage)}%`
-                                                                    : "Not Yet Assessed"}
-                                                            </span>
-                                                        </Tooltip>
-                                                    </TableCell>
-                                                </TableRow>
-                                            ))}
-                                        </TableBody>
-                                    </Table>
-                                </TableContainer>
-                            ) : (
-                                <Typography variant="body2" color="text.secondary">
-                                    No responsibilities found.
-                                </Typography>
-                            )}
-                            <Box mt={3} display="flex" justifyContent="flex-end" gap={2}>
-                                <Button variant="outlined" color="primary" onClick={() => setAddDialogOpen(true)}>
-                                    Add New
-                                </Button>
-                                <Button variant="outlined" color="secondary" onClick={() => setResponsibilities(originalResponsibilities.map(r => ({ ...r })))}>
-                                    Reset
-                                </Button>
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ))}
+                                            </TableBody>
+                                        </Table>
+                                    </TableContainer>
+                                ) : (
+                                    <Typography variant="body2" color="text.secondary">
+                                        No responsibilities found.
+                                    </Typography>
+                                )}
+                                <Box mt={3} display="flex" justifyContent="flex-end" gap={2}>
+                                    <Button variant="outlined" color="primary" onClick={() => setAddDialogOpen(true)}>
+                                        Add New
+                                    </Button>
+                                    <Button variant="outlined" color="secondary" onClick={() => setResponsibilities(originalResponsibilities.map(r => ({ ...r })))}>
+                                        Reset
+                                    </Button>
+                                </Box>
                             </Box>
-                        </Box>
-                    )}
-                </DialogContent>
-            </Dialog>
+                        )}
+                    </DialogContent>
+                </Dialog>
 
-            {/* Save changes prompt */}
-            <Dialog open={showSavePrompt} onClose={handleSavePromptClose}>
-                <DialogTitle>Unsaved Changes</DialogTitle>
-                <DialogContent>
-                    <Typography>You have unsaved changes. Do you want to save your changes?</Typography>
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={handleSavePromptYes} color="primary">Yes</Button>
-                    <Button onClick={handleSavePromptClose} color="primary">No</Button>
-                </DialogActions>
-            </Dialog>
+                {/* Save changes prompt */}
+                <Dialog open={showSavePrompt} onClose={handleSavePromptClose}>
+                    <DialogTitle>Unsaved Changes</DialogTitle>
+                    <DialogContent>
+                        <Typography>You have unsaved changes. Do you want to save your changes?</Typography>
+                    </DialogContent>
+                    <DialogActions>
+                        <Button onClick={handleSavePromptYes} color="primary">Yes</Button>
+                        <Button onClick={handleSavePromptClose} color="primary">No</Button>
+                    </DialogActions>
+                </Dialog>
 
-            {/* Add New Responsibility Dialog */}
-            <Dialog open={addDialogOpen} onClose={() => setAddDialogOpen(false)}>
-                <DialogTitle>Add New Responsibility</DialogTitle>
-                <DialogContent>
-                    <TextField
-                        autoFocus
-                        margin="dense"
-                        label="Responsibility Description"
-                        type="text"
-                        fullWidth
-                        value={newRespText}
-                        onChange={e => setNewRespText(e.target.value)}
-                        disabled={adding}
-                    />
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={() => setAddDialogOpen(false)} color="secondary" disabled={adding}>Cancel</Button>
-                    <Button onClick={handleAddNewResponsibility} color="primary" disabled={adding || !newRespText.trim()}>
-                        {adding ? 'Adding...' : 'Add'}
-                    </Button>
-                </DialogActions>
-            </Dialog>
+                {/* Add New Responsibility Dialog */}
+                <Dialog open={addDialogOpen} onClose={() => setAddDialogOpen(false)}>
+                    <DialogTitle>Add New Responsibility</DialogTitle>
+                    <DialogContent>
+                        <TextField
+                            autoFocus
+                            margin="dense"
+                            label="Responsibility Description"
+                            type="text"
+                            fullWidth
+                            value={newRespText}
+                            onChange={e => setNewRespText(e.target.value)}
+                            disabled={adding}
+                        />
+                    </DialogContent>
+                    <DialogActions>
+                        <Button onClick={() => setAddDialogOpen(false)} color="secondary" disabled={adding}>Cancel</Button>
+                        <Button onClick={handleAddNewResponsibility} color="primary" disabled={adding || !newRespText.trim()}>
+                            {adding ? 'Adding...' : 'Add'}
+                        </Button>
+                    </DialogActions>
+                </Dialog>
 
-            {/* Remove Responsibility Dialog */}
-            <Dialog open={removeDialogOpen} onClose={handleRemoveCancel}>
-                <DialogTitle>Are you sure you want to remove this?</DialogTitle>
-                <DialogActions>
-                    <Button onClick={handleRemoveConfirm} color="error">Yes</Button>
-                    <Button onClick={handleRemoveCancel} color="primary">No</Button>
-                </DialogActions>
-            </Dialog>
+                {/* Remove Responsibility Dialog */}
+                <Dialog open={removeDialogOpen} onClose={handleRemoveCancel}>
+                    <DialogTitle>Are you sure you want to remove this?</DialogTitle>
+                    <DialogActions>
+                        <Button onClick={handleRemoveConfirm} color="error">Yes</Button>
+                        <Button onClick={handleRemoveCancel} color="primary">No</Button>
+                    </DialogActions>
+                </Dialog>
 
-            {/* LLM Confirmation Dialog */}
-            <Dialog open={llmConfirmOpen.open} onClose={handleLlmCancel}>
-                <DialogTitle>Are you sure?</DialogTitle>
-                <DialogContent>
-                    <Typography>Do you want to ask the LLM to rewrite this responsibility?</Typography>
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={handleLlmConfirm} color="primary">Yes</Button>
-                    <Button onClick={handleLlmCancel} color="secondary">No</Button>
-                </DialogActions>
-            </Dialog>
-        </Box>
+                {/* LLM Confirmation Dialog */}
+                <Dialog open={llmConfirmOpen.open} onClose={handleLlmCancel}>
+                    <DialogTitle>Are you sure?</DialogTitle>
+                    <DialogContent>
+                        <Typography>Do you want to ask the LLM to rewrite this responsibility?</Typography>
+                    </DialogContent>
+                    <DialogActions>
+                        <Button onClick={handleLlmConfirm} color="primary">Yes</Button>
+                        <Button onClick={handleLlmCancel} color="secondary">No</Button>
+                    </DialogActions>
+                </Dialog>
+            </Box>
+        </>
     );
 };
 
