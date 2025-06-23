@@ -249,8 +249,8 @@ router.put('/responsibility/:id', authenticateToken, async (req: AuthenticatedRe
     }
 });
 
-// Add new responsibility - now requires authentication and filters by company
-router.post('/:id/responsibilities', authenticateToken, async (req: AuthenticatedRequest, res) => {
+// Endpoint to get a specific responsibility - now requires authentication
+router.get('/responsibility/:id', authenticateToken, async (req: AuthenticatedRequest, res) => {
     try {
         if (!req.user) {
             return res.status(401).json({ error: 'User not authenticated' });
@@ -258,43 +258,10 @@ router.post('/:id/responsibilities', authenticateToken, async (req: Authenticate
 
         const { id } = req.params;
         const companyId = req.user.companyId;
-        const { responsibility_name } = req.body;
-        
-        // First verify the PD belongs to the user's company
+
         const pdCheck = await pool.query(
-            'SELECT id FROM position_descriptions WHERE id = $1 AND company_id = $2',
-            [id, companyId]
-        );
-
-        if (pdCheck.rows.length === 0) {
-            return res.status(404).json({ error: 'Position description not found' });
-        }
-
-        const result = await pool.query(
-            'INSERT INTO responsibilities (pd_id, responsibility_name, responsibility_percentage) VALUES ($1, $2, 0) RETURNING *',
-            [id, responsibility_name]
-        );
-        res.status(201).json(result.rows[0]);
-    } catch (error) {
-        console.error('Error adding responsibility:', error);
-        res.status(500).json({ error: 'Failed to add responsibility' });
-    }
-});
-
-// Delete a responsibility - now requires authentication and filters by company
-router.delete('/responsibility/:id', authenticateToken, async (req: AuthenticatedRequest, res) => {
-    try {
-        if (!req.user) {
-            return res.status(401).json({ error: 'User not authenticated' });
-        }
-
-        const { id } = req.params;
-        const companyId = req.user.companyId;
-        
-        // First verify the responsibility belongs to a PD in the user's company
-        const pdCheck = await pool.query(
-            `SELECT r.id FROM responsibilities r 
-             JOIN position_descriptions pd ON r.pd_id = pd.id 
+            `SELECT r.* FROM responsibilities r
+             JOIN position_descriptions pd ON r.pd_id = pd.id
              WHERE r.id = $1 AND pd.company_id = $2`,
             [id, companyId]
         );
@@ -303,7 +270,70 @@ router.delete('/responsibility/:id', authenticateToken, async (req: Authenticate
             return res.status(404).json({ error: 'Responsibility not found' });
         }
 
+        res.json(pdCheck.rows[0]);
+    } catch (error) {
+        console.error('Error fetching responsibility:', error);
+        res.status(500).json({ error: 'Failed to fetch responsibility' });
+    }
+});
+
+// Endpoint to add a new responsibility - now requires authentication
+router.post('/:id/responsibilities', authenticateToken, async (req: AuthenticatedRequest, res) => {
+    try {
+        if (!req.user) {
+            return res.status(401).json({ error: 'User not authenticated' });
+        }
+
+        const { id: pd_id } = req.params;
+        const companyId = req.user.companyId;
+        const { responsibility_name, responsibility_percentage } = req.body;
+
+        // Verify the PD belongs to the company
+        const pdCheck = await pool.query(
+            'SELECT id FROM position_descriptions WHERE id = $1 AND company_id = $2',
+            [pd_id, companyId]
+        );
+
+        if (pdCheck.rows.length === 0) {
+            return res.status(404).json({ error: 'Position description not found' });
+        }
+
+        const result = await pool.query(
+            'INSERT INTO responsibilities (pd_id, responsibility_name, responsibility_percentage) VALUES ($1, $2, $3) RETURNING *',
+            [pd_id, responsibility_name, responsibility_percentage]
+        );
+        res.status(201).json(result.rows[0]);
+    } catch (error) {
+        console.error('Error adding responsibility:', error);
+        res.status(500).json({ error: 'Failed to add responsibility' });
+    }
+});
+
+// Endpoint to delete a responsibility - now requires authentication
+router.delete('/responsibility/:id', authenticateToken, async (req: AuthenticatedRequest, res) => {
+    try {
+        if (!req.user) {
+            return res.status(401).json({ error: 'User not authenticated' });
+        }
+
+        const { id } = req.params;
+        const companyId = req.user.companyId;
+
+        // Verify the responsibility belongs to a PD in the user's company
+        const pdCheck = await pool.query(
+            `SELECT r.id FROM responsibilities r 
+             JOIN position_descriptions pd ON r.pd_id = pd.id
+             WHERE r.id = $1 AND pd.company_id = $2`,
+            [id, companyId]
+        );
+
+        if (pdCheck.rows.length === 0) {
+            return res.status(404).json({ error: 'Responsibility not found' });
+        }
+
+        // Proceed with deletion
         await pool.query('DELETE FROM responsibilities WHERE id = $1', [id]);
+
         res.json({ message: 'Responsibility deleted successfully' });
     } catch (error) {
         console.error('Error deleting responsibility:', error);
