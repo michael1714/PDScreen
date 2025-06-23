@@ -142,10 +142,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         
         // Clear any session-related timeouts
         if (typeof window !== 'undefined') {
-            // Redirect to login page if not already there
-            if (window.location.pathname !== '/login' && window.location.pathname !== '/register') {
-                window.location.href = '/login';
-            }
+            // Redirect to landing page
+            window.location.href = '/';
         }
     };
 

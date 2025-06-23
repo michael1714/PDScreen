@@ -193,7 +193,7 @@ const PositionDescriptionList: React.FC = () => {
                     setResponsibilities([]);
                     setOriginalResponsibilities([]);
                 })
-                .finally(() => setRespLoading(false));
+                .then(() => setRespLoading(false));
         }
     }, [dialogOpen, tabIndex, selectedDescription]);
 
@@ -280,23 +280,28 @@ const PositionDescriptionList: React.FC = () => {
     const handleAddNewResponsibility = async () => {
         if (!selectedDescription || !newRespText.trim()) return;
         setAdding(true);
-        await apiService.post(`/upload/${selectedDescription.id}/responsibilities`, { responsibility_name: newRespText.trim() });
-        setAddDialogOpen(false);
-        setNewRespText('');
-        setAdding(false);
-        // Refresh responsibilities
-        setRespLoading(true);
-        apiService.get<any[]>(`/upload/${selectedDescription.id}/responsibilities`)
-            .then((response: { data: any[] }) => {
-                const data = response.data; // Axios wraps response
-                setResponsibilities(data);
-                setOriginalResponsibilities(data.map((r: any) => ({ ...r })));
-            })
-            .catch(() => {
-                setResponsibilities([]);
-                setOriginalResponsibilities([]);
-            })
-            .finally(() => setRespLoading(false));
+        try {
+            await apiService.post(`/upload/${selectedDescription.id}/responsibilities`, { responsibility_name: newRespText.trim() });
+            setAddDialogOpen(false);
+            setNewRespText('');
+            // Refresh responsibilities
+            setRespLoading(true);
+            apiService.get<any[]>(`/upload/${selectedDescription.id}/responsibilities`)
+                .then((response: { data: any[] }) => {
+                    const data = response.data;
+                    setResponsibilities(data);
+                    setOriginalResponsibilities(data.map((r: any) => ({ ...r })));
+                })
+                .catch(() => {
+                    setResponsibilities([]);
+                    setOriginalResponsibilities([]);
+                })
+                .then(() => setRespLoading(false));
+        } catch (error) {
+            // Handle post error
+        } finally {
+            setAdding(false);
+        }
     };
 
     const handleRemoveClick = (id: number) => {
@@ -463,31 +468,44 @@ const PositionDescriptionList: React.FC = () => {
         }
     };
 
-    // Add filter and sort logic
-    const filteredAndSortedData = useMemo(() => {
-        let filtered = [...descriptions];
-        
-        // Apply department filter
-        if (departmentFilter) {
-            filtered = filtered.filter(item => item.department === departmentFilter);
-        }
-        
-        // Apply sorting
-        filtered.sort((a, b) => {
-            const order = sortOrder === 'asc' ? 1 : -1;
+    const filteredAndSortedDescriptions = useMemo(() => {
+        let sorted = [...descriptions];
+
+        sorted.sort((a, b) => {
+            let compareA: any;
+            let compareB: any;
+
             switch (sortBy) {
                 case 'title':
-                    return order * a.title.localeCompare(b.title);
-                case 'department':
-                    return order * a.department.localeCompare(b.department);
+                    compareA = a.title;
+                    compareB = b.title;
+                    break;
+                case 'status':
+                    compareA = a.status;
+                    compareB = b.status;
+                    break;
                 case 'date':
                 default:
-                    return order * (new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
+                    compareA = new Date(a.upload_date);
+                    compareB = new Date(b.upload_date);
+                    break;
             }
+
+            if (compareA < compareB) {
+                return sortOrder === 'asc' ? -1 : 1;
+            }
+            if (compareA > compareB) {
+                return sortOrder === 'asc' ? 1 : -1;
+            }
+            return 0;
         });
-        
-        return filtered;
-    }, [descriptions, departmentFilter, sortBy, sortOrder]);
+
+        if (departmentFilter) {
+            return sorted.filter(desc => desc.department === departmentFilter);
+        }
+
+        return sorted;
+    }, [descriptions, sortBy, sortOrder, departmentFilter]);
 
     // Get unique departments for filter
     const departments = useMemo(() => 
@@ -509,9 +527,49 @@ const PositionDescriptionList: React.FC = () => {
 
     return (
         <Box sx={{ maxWidth: 1600, mx: 'auto', mt: 4, p: 3 }}>
-            <Typography variant="h5" gutterBottom>
+            <Typography variant="h4" component="h1">
                 Position Descriptions
             </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <FormControl variant="outlined" sx={{ minWidth: 220 }}>
+                    <InputLabel id="department-filter-label">Department</InputLabel>
+                    <Select
+                        labelId="department-filter-label"
+                        value={departmentFilter}
+                        onChange={(e) => setDepartmentFilter(e.target.value)}
+                        label="Department"
+                    >
+                        <MenuItem value="">All Departments</MenuItem>
+                        {departments.map(dept => (
+                            <MenuItem key={dept} value={dept}>{dept}</MenuItem>
+                        ))}
+                    </Select>
+                </FormControl>
+
+                <FormControl variant="outlined" sx={{ width: 220 }}>
+                    <InputLabel id="sort-by-label">Sort By</InputLabel>
+                    <Select
+                        labelId="sort-by-label"
+                        value={sortBy}
+                        onChange={(e) => setSortBy(e.target.value)}
+                        label="Sort By"
+                        sx={{ textAlign: 'left' }}
+                    >
+                        <MenuItem value="date" sx={{ justifyContent: 'flex-start' }}>Date</MenuItem>
+                        <MenuItem value="title" sx={{ justifyContent: 'flex-start' }}>Title</MenuItem>
+                        <MenuItem value="status" sx={{ justifyContent: 'flex-start' }}>Status</MenuItem>
+                    </Select>
+                </FormControl>
+
+                <Button
+                    variant="outlined"
+                    onClick={toggleSortOrder}
+                    sx={{ minWidth: 60, height: 56 }}
+                    aria-label={sortOrder === 'asc' ? 'Sort ascending' : 'Sort descending'}
+                >
+                    {sortOrder === 'asc' ? <ArrowUpwardIcon /> : <ArrowDownwardIcon />}
+                </Button>
+            </Box>
 
             {error && (
                 <Alert severity="error" sx={{ mb: 2 }}>
@@ -519,54 +577,9 @@ const PositionDescriptionList: React.FC = () => {
                 </Alert>
             )}
 
-            {/* Search and Filter Section */}
-            <Box sx={{ mb: 4 }}>
-                <Grid container spacing={2} alignItems="center" justifyContent="center">
-                    <Grid item sx={{ flexGrow: 1, minWidth: 150 }}>
-                        <FormControl fullWidth size="medium" sx={{ minWidth: 150 }}>
-                            <InputLabel>Department</InputLabel>
-                            <Select
-                                value={departmentFilter}
-                                onChange={(e) => setDepartmentFilter(e.target.value)}
-                                label="Department"
-                            >
-                                <MenuItem value="">All Departments</MenuItem>
-                                {departments.map(dept => (
-                                    <MenuItem key={dept} value={dept}>{dept}</MenuItem>
-                                ))}
-                            </Select>
-                        </FormControl>
-                    </Grid>
-                    <Grid item sx={{ flexGrow: 1, minWidth: 150 }}>
-                        <FormControl fullWidth size="medium" sx={{ minWidth: 150 }}>
-                            <InputLabel>Sort By</InputLabel>
-                            <Select
-                                value={sortBy}
-                                onChange={(e) => setSortBy(e.target.value)}
-                                label="Sort By"
-                            >
-                                <MenuItem value="date">Date</MenuItem>
-                                <MenuItem value="title">Title</MenuItem>
-                                <MenuItem value="department">Department</MenuItem>
-                            </Select>
-                        </FormControl>
-                    </Grid>
-                    <Grid item sx={{ flexGrow: 0, minWidth: 60, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <Button
-                            variant="outlined"
-                            onClick={toggleSortOrder}
-                            sx={{ minWidth: 60, height: 56, ml: 1 }}
-                            aria-label={sortOrder === 'asc' ? 'Sort ascending' : 'Sort descending'}
-                        >
-                            {sortOrder === 'asc' ? <ArrowUpwardIcon /> : <ArrowDownwardIcon />}
-                        </Button>
-                    </Grid>
-                </Grid>
-            </Box>
-
             {/* Cards Grid */}
             <Grid container spacing={4} sx={{ padding: '32px' }} alignItems="stretch">
-                {filteredAndSortedData.map((item) => {
+                {filteredAndSortedDescriptions.map((item) => {
                     return (
                         <Grid item xs={12} sm={6} md={4} lg={3} key={item.id}>
                             <Card 
