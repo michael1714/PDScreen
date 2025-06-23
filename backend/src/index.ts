@@ -24,8 +24,8 @@ if (!fs.existsSync('uploads')) {
 initializeDatabase().catch(console.error);
 
 // Routes
-app.use('/api/auth', authRouter);
 app.use('/api/upload', uploadRouter);
+app.use('/api/auth', authRouter);
 
 // Get content by key
 app.get('/api/content/:key', async (req, res) => {

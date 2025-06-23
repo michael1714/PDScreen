@@ -1,16 +1,11 @@
 import React, { useState, useRef } from 'react';
-import { Button, TextField, Box, Typography, Alert, CircularProgress, LinearProgress, Paper } from '@mui/material';
+import { useNavigate } from 'react-router-dom';
+import { Button, TextField, Box, Typography, Alert, CircularProgress, LinearProgress, Paper, IconButton } from '@mui/material';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import DescriptionIcon from '@mui/icons-material/Description';
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
-
-interface PositionDescription {
-    id: number;
-    title: string;
-    file_name: string;
-    upload_date: string;
-    status: string;
-}
+import CloseIcon from '@mui/icons-material/Close';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 
 const getFileIcon = (fileName: string) => {
     const ext = fileName.split('.').pop()?.toLowerCase();
@@ -28,6 +23,7 @@ const PositionDescriptionUpload: React.FC = () => {
     const [success, setSuccess] = useState<string | null>(null);
     const [dragActive, setDragActive] = useState(false);
     const fileInputRef = useRef<HTMLInputElement | null>(null);
+    const navigate = useNavigate();
 
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         if (event.target.files && event.target.files[0]) {
@@ -62,6 +58,14 @@ const PositionDescriptionUpload: React.FC = () => {
         fileInputRef.current?.click();
     };
 
+    const handleClose = () => {
+        navigate('/list');
+    };
+
+    const handleCancel = () => {
+        navigate('/list');
+    };
+
     const handleSubmit = async (event: React.FormEvent) => {
         event.preventDefault();
         if (!file || !title) {
@@ -91,11 +95,16 @@ const PositionDescriptionUpload: React.FC = () => {
             xhr.onload = () => {
                 setLoading(false);
                 if (xhr.status === 201) {
-                    setSuccess('File uploaded successfully!');
+                    setSuccess('File uploaded successfully! Redirecting to list...');
                     setTitle('');
                     setFile(null);
                     setProgress(0);
                     if (fileInputRef.current) fileInputRef.current.value = '';
+                    
+                    // Auto-redirect after 2 seconds
+                    setTimeout(() => {
+                        navigate('/list');
+                    }, 2000);
                 } else {
                     setError('Failed to upload file. Please try again.');
                 }
@@ -114,7 +123,21 @@ const PositionDescriptionUpload: React.FC = () => {
     };
 
     return (
-        <Box sx={{ maxWidth: 600, mx: 'auto', mt: 4, p: 3 }}>
+        <Box sx={{ maxWidth: 600, mx: 'auto', mt: 4, p: 3, position: 'relative' }}>
+            <IconButton
+                aria-label="close"
+                onClick={handleClose}
+                sx={{
+                    position: 'absolute',
+                    right: 8,
+                    top: 8,
+                    color: (theme) => theme.palette.grey[500],
+                    zIndex: 1,
+                }}
+            >
+                <CloseIcon />
+            </IconButton>
+
             <Typography variant="h5" gutterBottom>
                 Upload Position Description
             </Typography>
@@ -127,6 +150,7 @@ const PositionDescriptionUpload: React.FC = () => {
                     onChange={(e) => setTitle(e.target.value)}
                     margin="normal"
                     required
+                    disabled={loading}
                 />
 
                 <Paper
@@ -185,16 +209,26 @@ const PositionDescriptionUpload: React.FC = () => {
                     </Alert>
                 )}
 
-                <Button
-                    type="submit"
-                    variant="contained"
-                    color="primary"
-                    fullWidth
-                    disabled={loading}
-                    sx={{ mt: 2 }}
-                >
-                    {loading ? <CircularProgress size={24} /> : 'Upload'}
-                </Button>
+                <Box sx={{ display: 'flex', gap: 2, mt: 3 }}>
+                    <Button
+                        variant="outlined"
+                        onClick={handleCancel}
+                        disabled={loading}
+                        startIcon={<ArrowBackIcon />}
+                        sx={{ flex: 1 }}
+                    >
+                        Cancel
+                    </Button>
+                    <Button
+                        type="submit"
+                        variant="contained"
+                        color="primary"
+                        disabled={loading}
+                        sx={{ flex: 1 }}
+                    >
+                        {loading ? <CircularProgress size={24} /> : 'Upload'}
+                    </Button>
+                </Box>
             </form>
         </Box>
     );

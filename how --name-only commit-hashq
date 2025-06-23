@@ -1,0 +1,20 @@
+[33m2049e30[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmultiuser[m[33m)[m Complete multi-user authentication system with company-based data isolation
+[33mbc1a85c[m Merge pull request #3 from michael1714/multiuser
+[33mf7aba7d[m[33m ([m[1;31morigin/multiuser[m[33m)[m feat: Implement multi-user system with company-based data segregation and JWT authentication
+[33m99561c9[m Merge pull request #2 from michael1714/cursor/add-ai-to-landing-page-text-9fee
+[33mb779f96[m[33m ([m[1;31morigin/cursor/add-ai-to-landing-page-text-9fee[m[33m)[m Update landing page headline to emphasize AI-powered feature
+[33m7f74b7c[m merge conflicts
+[33m6102892[m[33m ([m[1;32mui-restore-point[m[33m)[m Fix AI automation percentage display and update responsibilities endpoint. Finalize UI tweaks.
+[33m043b77d[m[33m ([m[1;31morigin/ui-restore-point[m[33m)[m feat(ui): Refactor landing page hero section layout and make fully mobile responsive - Use flex row for hero content with text and image as siblings - Align image with headline top, set max width to 500px - Stack vertically on mobile, center content - General style and spacing improvements
+[33m9bdc21d[m Merge pull request #1 from michael1714/feature/llm-state
+[33mefd5916[m[33m ([m[1;31morigin/feature/llm-state[m[33m, [m[1;32mfeature/llm-state[m[33m)[m feat(ui): Enhance landing page with auto-cycling testimonial carousel - Replace MobileStepper with arrow navigation - Add 6-second auto-cycling for testimonials - Improve review section styling and responsiveness
+[33ma5a9409[m[33m ([m[1;32mfeature/modern-ui[m[33m)[m Feat: Add card-based layout and enhanced search/filter
+[33m54de825[m[33m ([m[1;32mfeature/llm-polling-update[m[33m, [m[1;32mfeature/llm-editing[m[33m)[m fix(responsibilities): use correct LLM_Desc property for LLM toggle display
+[33m7dd4d8b[m feat(responsibilities): always show Add New and Reset buttons, fix table column widths for better visuals
+[33mcd680cd[m feat(responsibilities): total as integer, right-aligned, sliders whole numbers only
+[33m3df504e[m feat(list): add modal with Preview and Responsibilities tabs for file name link
+[33mb620f30[m refactor(list): remove Title column, use title as file name link to #
+[33m3287fa8[m[33m ([m[1;32mfeature/ui-enhancements[m[33m)[m feat(ui): navigation bar elevation, active link, responsive drawer; file upload drag-and-drop, preview, progress bar
+[33madc57b1[m feat(list): add position description list view with download and delete functionality
+[33ma347934[m chore: add uploads directory to gitignore
+[33m6677b9d[m feat(upload): add position description upload feature

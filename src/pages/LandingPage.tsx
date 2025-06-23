@@ -1,13 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import styles from './LandingPage.module.css';
-import { Button, Paper, MobileStepper, useTheme, IconButton } from '@mui/material';
+import { Button, IconButton } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import DescriptionIcon from '@mui/icons-material/Description';
 import SearchIcon from '@mui/icons-material/Search';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import KeyboardArrowLeft from '@mui/icons-material/KeyboardArrowLeft';
-import KeyboardArrowRight from '@mui/icons-material/KeyboardArrowRight';
 import ArrowBackIosNewIcon from '@mui/icons-material/ArrowBackIosNew';
 import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
 
@@ -28,7 +26,6 @@ const reviews = [
 
 const LandingPage: React.FC = () => {
   const navigate = useNavigate();
-  const theme = useTheme();
   const [activeStep, setActiveStep] = useState(0);
 
   const handleNext = () => {
@@ -66,17 +63,29 @@ const LandingPage: React.FC = () => {
             <div className={styles.heroSubheadline}>
               Streamline your HR workflow. Upload, organize, and analyze PDs with AI-driven insights—all in one place.
             </div>
-            <Button
-              variant="contained"
-              color="secondary"
-              size="large"
-              startIcon={<CloudUploadIcon />}
-              style={{ fontWeight: 700, fontSize: '1.15rem', padding: '0.85rem 2.2rem', borderRadius: 12, boxShadow: '0 2px 12px rgba(30,60,114,0.18)' }}
-              onClick={() => navigate('/upload')}
-              aria-label="Upload your PDs"
-            >
-              Upload your PDs
-            </Button>
+            <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                <Button
+                  variant="contained"
+                  color="secondary"
+                  size="large"
+                  startIcon={<CloudUploadIcon />}
+                  style={{ fontWeight: 700, fontSize: '1.15rem', padding: '0.85rem 2.2rem', borderRadius: 12, boxShadow: '0 2px 12px rgba(30,60,114,0.18)' }}
+                  onClick={() => navigate('/register')}
+                  aria-label="Upload your PDs"
+                >
+                  Get Started
+                </Button>
+                <Button
+                  variant="outlined"
+                  color="inherit"
+                  size="large"
+                   style={{ fontWeight: 700, fontSize: '1.15rem', padding: '0.85rem 2.2rem', borderRadius: 12, borderColor: 'white', color: 'white' }}
+                  onClick={() => navigate('/login')}
+                  aria-label="Login"
+                >
+                  Login
+                </Button>
+            </div>
           </div>
           <div className={styles.heroImageContainer}>
             <img
@@ -175,16 +184,18 @@ const LandingPage: React.FC = () => {
         <div style={{ color: '#1e3c72', fontSize: '2.1rem', fontWeight: 800, margin: '3rem 0 1.2rem 0', letterSpacing: 1, textAlign: 'center', maxWidth: 700 }}>
           Ready to streamline your Position Descriptions?
         </div>
-        <Button
-          variant="contained"
-          color="secondary"
-          size="large"
-          onClick={() => navigate('/upload')}
-          sx={{ fontSize: '1.2rem', fontWeight: 700, px: 4, py: 1.5, borderRadius: 8, boxShadow: 3, background: '#1e3c72', color: '#fff', '&:hover': { background: '#2a5298', color: '#fff' } }}
-          aria-label="Get Started"
-        >
-          Get Started
-        </Button>
+        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', justifyContent: 'center' }}>
+            <Button
+              variant="contained"
+              color="secondary"
+              size="large"
+              onClick={() => navigate('/register')}
+              sx={{ fontSize: '1.2rem', fontWeight: 700, px: 4, py: 1.5, borderRadius: 8, boxShadow: 3, background: '#1e3c72', color: '#fff', '&:hover': { background: '#2a5298', color: '#fff' } }}
+              aria-label="Get Started"
+            >
+              Get Started
+            </Button>
+        </div>
       </div>
 
       {/* Footer Section */}

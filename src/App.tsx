@@ -1,104 +1,87 @@
-import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
-import { AppBar, Toolbar, Typography, Button, Container, useTheme, useMediaQuery, IconButton, Drawer, List, ListItem, ListItemText, ListItemButton, Box } from '@mui/material';
-import MenuIcon from '@mui/icons-material/Menu';
-import React, { useState } from 'react';
-import './App.css';
-import PositionDescriptionUpload from './components/PositionDescriptionUpload';
-import PositionDescriptionList from './components/PositionDescriptionList';
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { ThemeProvider, createTheme } from '@mui/material/styles';
+import CssBaseline from '@mui/material/CssBaseline';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 import LandingPage from './pages/LandingPage';
+import LoginPage from './pages/LoginPage';
+import RegistrationPage from './pages/RegistrationPage';
+import WelcomePage from './pages/WelcomePage';
+import PasswordResetPage from './pages/PasswordResetPage';
+import PositionDescriptionList from './components/PositionDescriptionList';
+import PositionDescriptionUpload from './components/PositionDescriptionUpload';
+import ProtectedRoute from './components/ProtectedRoute';
+import SessionWarning from './components/SessionWarning';
+import Navigation from './components/Navigation';
+import './App.css';
 
-const navLinks = [
-  { label: 'Home', path: '/' },
-  { label: 'Upload', path: '/upload' },
-  { label: 'List', path: '/list' },
-];
+const theme = createTheme({
+  palette: {
+    mode: 'light',
+    primary: {
+      main: '#1976d2',
+    },
+    secondary: {
+      main: '#dc004e',
+    },
+  },
+});
 
-function Navigation() {
+const AppContent: React.FC = () => {
+  const { isAuthenticated, loading } = useAuth();
   const location = useLocation();
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const [drawerOpen, setDrawerOpen] = useState(false);
+  const shouldShowNav = isAuthenticated && !['/', '/login', '/register', '/welcome'].includes(location.pathname);
+  const isLandingTypePage = ['/', '/login', '/register', '/welcome'].includes(location.pathname);
 
-  const handleDrawerToggle = () => setDrawerOpen(!drawerOpen);
+  if (loading) {
+    return <div>Loading...</div>;
+  }
 
-  return (
-    <AppBar position="fixed" elevation={4}>
-      <Toolbar>
-        <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-          PD Screen
-        </Typography>
-        {isMobile ? (
-          <>
-            <IconButton color="inherit" edge="end" onClick={handleDrawerToggle}>
-              <MenuIcon />
-            </IconButton>
-            <Drawer anchor="right" open={drawerOpen} onClose={handleDrawerToggle}>
-              <Box sx={{ width: 200 }} role="presentation" onClick={handleDrawerToggle}>
-                <List>
-                  {navLinks.map((link) => (
-                    <ListItem disablePadding key={link.path}>
-                      <ListItemButton
-                        component={Link}
-                        to={link.path}
-                        selected={location.pathname === link.path}
-                      >
-                        <ListItemText primary={link.label} />
-                      </ListItemButton>
-                    </ListItem>
-                  ))}
-                </List>
-              </Box>
-            </Drawer>
-          </>
-        ) : (
-          navLinks.map((link) => (
-            <Button
-              key={link.path}
-              color={location.pathname === link.path ? 'secondary' : 'inherit'}
-              component={Link}
-              to={link.path}
-              sx={{
-                borderBottom: location.pathname === link.path ? '2px solid #fff' : 'none',
-                borderRadius: 0,
-                mx: 1,
-              }}
-            >
-              {link.label}
-            </Button>
-          ))
-        )}
-      </Toolbar>
-    </AppBar>
-  );
-}
-
-function AppContent() {
-  const location = useLocation();
   return (
     <div className="App">
-      {location.pathname !== '/' && <Navigation />}
-      <div className={`main-content${location.pathname === '/' ? ' landing' : ''}`}>
-        {location.pathname === '/' ? (
-          <LandingPage />
-        ) : (
-          <Container>
-            <Routes>
-              <Route path="/upload" element={<PositionDescriptionUpload />} />
-              <Route path="/list" element={<PositionDescriptionList />} />
-            </Routes>
-          </Container>
-        )}
+      {shouldShowNav && <Navigation />}
+      <div className={`main-content${isLandingTypePage ? ' landing' : ''}`}>
+        <SessionWarning />
+        <Routes>
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegistrationPage />} />
+          <Route path="/welcome" element={<WelcomePage />} />
+          <Route path="/reset" element={<PasswordResetPage />} />
+          <Route 
+            path="/list" 
+            element={
+              <ProtectedRoute>
+                <PositionDescriptionList />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/upload" 
+            element={
+              <ProtectedRoute>
+                <PositionDescriptionUpload />
+              </ProtectedRoute>
+            } 
+          />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
       </div>
     </div>
   );
-}
+};
 
-function App() {
+const App: React.FC = () => {
   return (
-    <Router>
-      <AppContent />
-    </Router>
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <AuthProvider>
+        <Router>
+          <AppContent />
+        </Router>
+      </AuthProvider>
+    </ThemeProvider>
   );
-}
+};
 
 export default App; 
