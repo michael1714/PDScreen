@@ -5,12 +5,16 @@ import {
 } from '@mui/material';
 import DescriptionIcon from '@mui/icons-material/Description';
 import AddIcon from '@mui/icons-material/Add';
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import HomeIcon from '@mui/icons-material/Home';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import LogoutIcon from '@mui/icons-material/Logout';
 import ExpandLess from '@mui/icons-material/ExpandLess';
 import ExpandMore from '@mui/icons-material/ExpandMore';
 import { useAuth } from '../contexts/AuthContext';
+import { NavLink } from 'react-router-dom';
+import { Typography } from '@mui/material';
+import BarChartIcon from '@mui/icons-material/BarChart';
 
 const drawerWidth = 220;
 
@@ -18,7 +22,7 @@ const Sidebar: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { logout } = useAuth();
-  const [descOpen, setDescOpen] = React.useState(true);
+  const [descOpen, setDescOpen] = React.useState(() => ['/upload', '/branding-wizard'].includes(location.pathname));
 
   return (
     <Drawer
@@ -31,18 +35,18 @@ const Sidebar: React.FC = () => {
     >
       <Toolbar />
       <Box sx={{ overflow: 'auto', display: 'flex', flexDirection: 'column', height: '100%' }}>
+        <Box sx={{ p: 2, display: 'flex', alignItems: 'center' }}>
+          <Typography variant="h6" fontWeight={700} color="primary">
+            PDScreen
+          </Typography>
+        </Box>
+        <Divider />
         <List>
-          <ListItem disablePadding>
-            <ListItemButton selected={location.pathname === '/list'} onClick={() => navigate('/list')}>
-              <ListItemIcon><HomeIcon /></ListItemIcon>
-              <ListItemText primary="Dashboard" />
-            </ListItemButton>
-          </ListItem>
-          <ListItem disablePadding>
-            <ListItemButton selected={location.pathname === '/admin'} onClick={() => navigate('/admin')}>
-              <ListItemIcon><AdminPanelSettingsIcon /></ListItemIcon>
-              <ListItemText primary="Admin" />
-            </ListItemButton>
+          <ListItem button component={NavLink} to="/dashboard">
+            <ListItemIcon>
+              <BarChartIcon color="primary" />
+            </ListItemIcon>
+            <ListItemText primary="Dashboard" />
           </ListItem>
           <ListItem disablePadding>
             <ListItemButton selected={location.pathname === '/list'} onClick={() => navigate('/list')} sx={{ pr: 0 }}>
@@ -56,17 +60,43 @@ const Sidebar: React.FC = () => {
           <Collapse in={descOpen} timeout="auto" unmountOnExit>
             <List component="div" disablePadding>
               <ListItem disablePadding sx={{ pl: 4 }}>
-                <ListItemButton selected={location.pathname === '/upload'} onClick={() => navigate('/upload')}>
-                  <ListItemIcon><AddIcon /></ListItemIcon>
-                  <ListItemText primary="Upload" />
+                <ListItemButton 
+                  selected={location.pathname === '/upload'} 
+                  onClick={() => navigate('/upload')} 
+                  sx={{ py: 0.5 }}
+                >
+                  <ListItemIcon sx={{ minWidth: 32 }}><AddIcon fontSize="small" /></ListItemIcon>
+                  <ListItemText primary="Upload" primaryTypographyProps={{ fontSize: 14 }} />
+                </ListItemButton>
+              </ListItem>
+              <ListItem disablePadding sx={{ pl: 4 }}>
+                <ListItemButton 
+                  selected={location.pathname === '/branding-wizard'} 
+                  onClick={() => navigate('/branding-wizard')} 
+                  sx={{ py: 0.5 }}
+                >
+                  <ListItemIcon sx={{ minWidth: 32 }}><AutoAwesomeIcon fontSize="small" /></ListItemIcon>
+                  <ListItemText primary="Branding Wizard" primaryTypographyProps={{ fontSize: 14 }} />
                 </ListItemButton>
               </ListItem>
             </List>
           </Collapse>
+          <ListItem button component={NavLink} to="/company-details">
+            <ListItemIcon>
+              <HomeIcon />
+            </ListItemIcon>
+            <ListItemText primary="Company Details" />
+          </ListItem>
         </List>
         <Box sx={{ flexGrow: 1 }} />
         <Divider />
         <List>
+          <ListItem disablePadding>
+            <ListItemButton selected={location.pathname === '/admin'} onClick={() => navigate('/admin')}>
+              <ListItemIcon><AdminPanelSettingsIcon /></ListItemIcon>
+              <ListItemText primary="Admin" />
+            </ListItemButton>
+          </ListItem>
           <ListItem disablePadding>
             <ListItemButton onClick={logout}>
               <ListItemIcon><LogoutIcon /></ListItemIcon>
