@@ -3,7 +3,6 @@ import { useNavigate, Link as RouterLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import apiService from '../services/api';
 import {
-    Container,
     Box,
     TextField,
     Button,
@@ -20,6 +19,8 @@ import {
 import CloseIcon from '@mui/icons-material/Close';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
+import EmailIcon from '@mui/icons-material/Email';
+import LockIcon from '@mui/icons-material/Lock';
 
 const LoginPage: React.FC = () => {
     const navigate = useNavigate();
@@ -82,7 +83,7 @@ const LoginPage: React.FC = () => {
                     localStorage.removeItem('rememberMe');
                 }
                 
-                navigate('/list'); // Redirect to the list page after login
+                navigate('/dashboard'); // Redirect to the dashboard after login
             } else {
                 setError('Login failed: No token received.');
             }
@@ -125,113 +126,144 @@ const LoginPage: React.FC = () => {
     };
 
     return (
-        <Container component="main" maxWidth="xs">
-            <Paper elevation={6} sx={{ padding: 4, display: 'flex', flexDirection: 'column', alignItems: 'center', borderRadius: 2, position: 'relative' }}>
-                <IconButton
-                    aria-label="close"
-                    onClick={() => navigate('/')}
-                    sx={{
-                        position: 'absolute',
-                        right: 8,
-                        top: 8,
-                        color: (theme) => theme.palette.grey[500],
-                    }}
-                >
-                    <CloseIcon />
-                </IconButton>
-                <Typography component="h1" variant="h5" sx={{ mb: 2 }}>
-                    Sign In
-                </Typography>
-                {redirectMessage && (
-                    <Alert severity="info" sx={{ mt: 2, width: '100%' }}>
-                        {redirectMessage}
-                    </Alert>
-                )}
-                <Box component="form" onSubmit={handleSubmit} noValidate sx={{ mt: 1, width: '100%' }}>
-                    <TextField
-                        margin="normal"
-                        required
-                        fullWidth
-                        id="email"
-                        label="Email Address"
-                        name="email"
-                        autoComplete="email"
-                        autoFocus
-                        value={email}
-                        onChange={(e) => handleInputChange('email', e.target.value)}
-                        disabled={loading}
-                        error={!!validationErrors.email}
-                        helperText={validationErrors.email}
-                        aria-describedby="email-error"
-                    />
-                    <TextField
-                        margin="normal"
-                        required
-                        fullWidth
-                        name="password"
-                        label="Password"
-                        type={showPassword ? 'text' : 'password'}
-                        id="password"
-                        autoComplete="current-password"
-                        value={password}
-                        onChange={(e) => handleInputChange('password', e.target.value)}
-                        disabled={loading}
-                        error={!!validationErrors.password}
-                        helperText={validationErrors.password}
-                        aria-describedby="password-error"
-                        InputProps={{
-                            endAdornment: (
-                                <InputAdornment position="end">
-                                    <IconButton
-                                        aria-label="toggle password visibility"
-                                        onClick={() => setShowPassword(!showPassword)}
-                                        edge="end"
-                                    >
-                                        {showPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
-                                    </IconButton>
-                                </InputAdornment>
-                            ),
-                        }}
-                    />
-                    <FormControlLabel
-                        control={
-                            <Checkbox 
-                                value="remember" 
-                                color="primary"
-                                checked={rememberMe}
-                                onChange={(e) => setRememberMe(e.target.checked)}
-                                disabled={loading}
-                            />
-                        }
-                        label="Remember me"
-                        sx={{ mt: 1 }}
-                    />
-                    {error && (
-                        <Alert severity="error" sx={{ mt: 2, width: '100%' }}>
-                            {error}
+        <Box sx={{ minHeight: '100vh', background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Paper elevation={0} sx={{ display: 'flex', width: { xs: '100%', md: 900 }, minHeight: 500, borderRadius: 4, overflow: 'hidden', boxShadow: 3 }}>
+                {/* Left branding/welcome */}
+                <Box sx={{
+                    display: { xs: 'none', md: 'flex' },
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: 350,
+                    background: 'linear-gradient(135deg, #1976d2 0%, #42a5f5 100%)',
+                    color: '#fff',
+                    p: 4,
+                }}>
+                    <Box sx={{ mb: 3 }}>
+                        <img src="/logo192.png" alt="Logo" style={{ width: 60, height: 60, borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }} />
+                    </Box>
+                    <Typography variant="h4" sx={{ fontWeight: 700, mb: 2 }}>Welcome Back!</Typography>
+                    <Typography variant="body1" sx={{ opacity: 0.9, mb: 2, textAlign: 'center' }}>
+                        Sign in to your PDScreen account to continue managing your position descriptions.
+                    </Typography>
+                    <Box sx={{ mt: 2, fontSize: 12, opacity: 0.7 }}>© {new Date().getFullYear()} PDScreen</Box>
+                </Box>
+                {/* Right form card */}
+                <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', p: { xs: 2, md: 6 }, background: '#fff', minWidth: 0 }}>
+                    <IconButton
+                        aria-label="close"
+                        onClick={() => navigate('/')}
+                        sx={{ position: 'absolute', right: 24, top: 24, color: 'grey.500', zIndex: 2 }}
+                    >
+                        <CloseIcon />
+                    </IconButton>
+                    <Typography component="h1" variant="h4" sx={{ fontWeight: 700, mb: 2, textAlign: 'left' }}>
+                        Sign In
+                    </Typography>
+                    {redirectMessage && (
+                        <Alert severity="info" sx={{ mt: 2, width: '100%' }}>
+                            {redirectMessage}
                         </Alert>
                     )}
-                    <Button
-                        type="submit"
-                        fullWidth
-                        variant="contained"
-                        sx={{ mt: 3, mb: 2 }}
-                        disabled={loading}
-                        aria-describedby="login-error"
-                    >
-                        {loading ? <CircularProgress size={24} /> : 'Sign In'}
-                    </Button>
-                    <Box textAlign="center" sx={{ mt: 2 }}>
-                        <Link component={RouterLink} to="/register" variant="body2" sx={{ display: 'block', mb: 1 }}>
-                            {"Don't have an account? Sign Up"}
-                        </Link>
-                        <Link component={RouterLink} to="/reset" variant="body2">
-                            {"Forgot your password?"}
-                        </Link>
+                    <Box component="form" onSubmit={handleSubmit} noValidate sx={{ mt: 1, width: '100%' }}>
+                        <TextField
+                            margin="normal"
+                            required
+                            fullWidth
+                            id="email"
+                            label="Email Address"
+                            name="email"
+                            autoComplete="email"
+                            autoFocus
+                            value={email}
+                            onChange={(e) => handleInputChange('email', e.target.value)}
+                            disabled={loading}
+                            error={!!validationErrors.email}
+                            helperText={validationErrors.email}
+                            aria-describedby="email-error"
+                            InputProps={{
+                                startAdornment: (
+                                    <InputAdornment position="start">
+                                        <EmailIcon />
+                                    </InputAdornment>
+                                ),
+                            }}
+                        />
+                        <TextField
+                            margin="normal"
+                            required
+                            fullWidth
+                            name="password"
+                            label="Password"
+                            type={showPassword ? 'text' : 'password'}
+                            id="password"
+                            autoComplete="current-password"
+                            value={password}
+                            onChange={(e) => handleInputChange('password', e.target.value)}
+                            disabled={loading}
+                            error={!!validationErrors.password}
+                            helperText={validationErrors.password}
+                            aria-describedby="password-error"
+                            InputProps={{
+                                startAdornment: (
+                                    <InputAdornment position="start">
+                                        <LockIcon />
+                                    </InputAdornment>
+                                ),
+                                endAdornment: (
+                                    <InputAdornment position="end">
+                                        <IconButton
+                                            aria-label="toggle password visibility"
+                                            onClick={() => setShowPassword(!showPassword)}
+                                            edge="end"
+                                        >
+                                            {showPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                                        </IconButton>
+                                    </InputAdornment>
+                                ),
+                            }}
+                        />
+                        <FormControlLabel
+                            control={
+                                <Checkbox
+                                    value="remember"
+                                    color="primary"
+                                    checked={rememberMe}
+                                    onChange={(e) => setRememberMe(e.target.checked)}
+                                    disabled={loading}
+                                />
+                            }
+                            label="Remember me"
+                            sx={{ mt: 1 }}
+                        />
+                        {error && (
+                            <Alert severity="error" sx={{ mt: 2, width: '100%' }}>
+                                {error}
+                            </Alert>
+                        )}
+                        <Button
+                            type="submit"
+                            fullWidth
+                            variant="contained"
+                            size="large"
+                            sx={{ mt: 3, mb: 2, fontWeight: 600, boxShadow: 1 }}
+                            disabled={loading}
+                            aria-describedby="login-error"
+                        >
+                            {loading ? <CircularProgress size={24} /> : 'Sign In'}
+                        </Button>
+                        <Box textAlign="center" sx={{ mt: 2 }}>
+                            <Link component={RouterLink} to="/register" variant="body2" sx={{ display: 'block', mb: 1, fontWeight: 500 }}>
+                                {"Don't have an account? Sign Up"}
+                            </Link>
+                            <Link component={RouterLink} to="/reset" variant="body2">
+                                {"Forgot your password?"}
+                            </Link>
+                        </Box>
                     </Box>
                 </Box>
             </Paper>
-        </Container>
+        </Box>
     );
 };
 

@@ -21,7 +21,8 @@ export const authenticateToken = (req: AuthenticatedRequest, res: Response, next
     if (err) {
       return res.sendStatus(403); // Token is invalid or expired
     }
-    req.user = user.user;
+    // Support both flat and nested user payloads
+    req.user = user.companyId ? user : user.user;
     next();
   });
 }; 

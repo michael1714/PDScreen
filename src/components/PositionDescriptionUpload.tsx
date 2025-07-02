@@ -1,11 +1,12 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, TextField, Box, Typography, Alert, CircularProgress, LinearProgress, Paper, IconButton } from '@mui/material';
+import { Button, TextField, Box, Typography, Alert, CircularProgress, LinearProgress, Paper, IconButton, MenuItem } from '@mui/material';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import DescriptionIcon from '@mui/icons-material/Description';
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
 import CloseIcon from '@mui/icons-material/Close';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import apiService, { Department } from '../services/api';
 
 const getFileIcon = (fileName: string) => {
     const ext = fileName.split('.').pop()?.toLowerCase();
@@ -24,6 +25,20 @@ const PositionDescriptionUpload: React.FC = () => {
     const [dragActive, setDragActive] = useState(false);
     const fileInputRef = useRef<HTMLInputElement | null>(null);
     const navigate = useNavigate();
+    const [departments, setDepartments] = useState<Department[]>([]);
+    const [departmentId, setDepartmentId] = useState<number | ''>('');
+
+    useEffect(() => {
+        const fetchDepts = async () => {
+            try {
+                const data = await apiService.getDepartments();
+                setDepartments(data.filter(d=>d.is_active));
+            } catch (err) {
+                console.error('Failed to fetch departments');
+            }
+        };
+        fetchDepts();
+    }, []);
 
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         if (event.target.files && event.target.files[0]) {
@@ -68,8 +83,8 @@ const PositionDescriptionUpload: React.FC = () => {
 
     const handleSubmit = async (event: React.FormEvent) => {
         event.preventDefault();
-        if (!file || !title) {
-            setError('Please provide both a title and a file');
+        if (!file || !title || !departmentId) {
+            setError('Please provide title, department and file');
             return;
         }
 
@@ -81,44 +96,28 @@ const PositionDescriptionUpload: React.FC = () => {
         const formData = new FormData();
         formData.append('file', file);
         formData.append('title', title);
+        if (departmentId) formData.append('departmentId', String(departmentId));
 
         try {
-            const xhr = new XMLHttpRequest();
-            xhr.open('POST', 'http://localhost:3000/api/upload');
-
-            xhr.upload.onprogress = (event) => {
-                if (event.lengthComputable) {
-                    setProgress(Math.round((event.loaded / event.total) * 100));
+            await apiService.post('/upload', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' },
+                onUploadProgress: (event: ProgressEvent) => {
+                    if (event.lengthComputable) {
+                        setProgress(Math.round((event.loaded / event.total) * 100));
+                    }
                 }
-            };
-
-            xhr.onload = () => {
-                setLoading(false);
-                if (xhr.status === 201) {
-                    setSuccess('File uploaded successfully! Redirecting to list...');
-                    setTitle('');
-                    setFile(null);
-                    setProgress(0);
-                    if (fileInputRef.current) fileInputRef.current.value = '';
-                    
-                    // Auto-redirect after 2 seconds
-                    setTimeout(() => {
-                        navigate('/list');
-                    }, 2000);
-                } else {
-                    setError('Failed to upload file. Please try again.');
-                }
-            };
-
-            xhr.onerror = () => {
-                setLoading(false);
-                setError('Failed to upload file. Please try again.');
-            };
-
-            xhr.send(formData);
-        } catch (err) {
-            setLoading(false);
+            });
+            setSuccess('File uploaded successfully! Redirecting to list...');
+            setTitle('');
+            setFile(null);
+            setProgress(0);
+            if (fileInputRef.current) fileInputRef.current.value = '';
+            setTimeout(() => {
+                navigate('/list');
+            }, 2000);
+        } catch (err: any) {
             setError('Failed to upload file. Please try again.');
+            setLoading(false);
         }
     };
 
@@ -152,6 +151,21 @@ const PositionDescriptionUpload: React.FC = () => {
                     required
                     disabled={loading}
                 />
+
+                <TextField
+                    select
+                    fullWidth
+                    label="Department"
+                    value={departmentId}
+                    onChange={(e) => setDepartmentId(Number(e.target.value))}
+                    margin="normal"
+                    required
+                    disabled={loading}
+                >
+                    {departments.map((dept)=> (
+                        <MenuItem key={dept.id} value={dept.id}>{dept.name}</MenuItem>
+                    ))}
+                </TextField>
 
                 <Paper
                     elevation={dragActive ? 8 : 2}

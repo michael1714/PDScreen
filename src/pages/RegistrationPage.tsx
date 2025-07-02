@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import {
     Container,
@@ -25,10 +25,15 @@ import {
     Select,
     MenuItem,
     SelectChangeEvent,
+    Link as MuiLink
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
+import EmailIcon from '@mui/icons-material/Email';
+import LockIcon from '@mui/icons-material/Lock';
+import PersonIcon from '@mui/icons-material/Person';
+import BusinessIcon from '@mui/icons-material/Business';
 
 const steps = ['Account Type', 'Company Information', 'Your Details'];
 
@@ -67,7 +72,7 @@ const RegistrationPage: React.FC = () => {
     const [validationErrors, setValidationErrors] = useState<{[key: string]: string}>({});
 
     const [formData, setFormData] = useState({
-        accountType: 'personal',
+        accountType: 'company',
         email: '',
         password: '',
         confirmPassword: '',
@@ -206,15 +211,28 @@ const RegistrationPage: React.FC = () => {
         return 'Strong';
     };
 
-    const getStepContent = (step: number) => {
+    const getStepContent = (step: number, {
+        showPassword,
+        setShowPassword,
+        showConfirmPassword,
+        setShowConfirmPassword,
+        loading,
+        validationErrors,
+        handleChange,
+        handleSelectChange,
+        formData,
+        passwordValidation,
+        getPasswordStrengthText,
+        getPasswordStrengthColor,
+    }: any) => {
         switch (step) {
             case 0:
                 return (
                     <FormControl component="fieldset">
                         <FormLabel component="legend">What kind of account do you need?</FormLabel>
                         <RadioGroup row name="accountType" value={formData.accountType} onChange={handleChange}>
-                            <FormControlLabel value="personal" control={<Radio />} label="Personal" />
                             <FormControlLabel value="company" control={<Radio />} label="Company" />
+                            <FormControlLabel value="personal" control={<Radio />} label="Personal" />
                         </RadioGroup>
                     </FormControl>
                 );
@@ -527,61 +545,98 @@ const RegistrationPage: React.FC = () => {
     };
 
     return (
-        <Container component="main" maxWidth="md">
-            <Paper elevation={6} sx={{ padding: 4, borderRadius: 2, position: 'relative' }}>
-                <IconButton
-                    aria-label="close"
-                    onClick={() => navigate(-1)}
-                    sx={{
-                        position: 'absolute',
-                        right: 8,
-                        top: 8,
-                        color: (theme) => theme.palette.grey[500],
-                    }}
-                >
-                    <CloseIcon />
-                </IconButton>
-                <Typography component="h1" variant="h4" align="center" gutterBottom>
-                    Create Account
-                </Typography>
-                <Stepper activeStep={activeStep} sx={{ mt: 3, mb: 3, width: '100%' }}>
-                    {steps.map((label, index) => {
-                        const stepProps: { completed?: boolean } = {};
-                        if (formData.accountType === 'personal' && index === 1) {
-                            return null; // Don't show company step for personal
-                        }
-                        return (
-                            <Step key={label} {...stepProps}>
-                                <StepLabel>{label}</StepLabel>
-                            </Step>
-                        );
-                    })}
-                </Stepper>
-
-                <Box sx={{ width: '100%' }}>
-                    {getStepContent(activeStep)}
-                    {error && (
-                        <Alert severity="error" sx={{ mt: 2, width: '100%' }}>
-                            {error}
-                        </Alert>
-                    )}
-                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 3 }}>
-                        {activeStep !== 0 && (
-                            <Button onClick={handleBack} sx={{ mr: 1 }} disabled={loading}>
-                                Back
-                            </Button>
+        <Box sx={{ minHeight: '100vh', background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Paper elevation={0} sx={{ display: 'flex', width: { xs: '100%', md: 900 }, minHeight: 600, borderRadius: 4, overflow: 'hidden', boxShadow: 3 }}>
+                {/* Left branding/welcome */}
+                <Box sx={{
+                    display: { xs: 'none', md: 'flex' },
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: 350,
+                    background: 'linear-gradient(135deg, #1976d2 0%, #42a5f5 100%)',
+                    color: '#fff',
+                    p: 4,
+                }}>
+                    <Box sx={{ mb: 3 }}>
+                        <img src="/logo192.png" alt="Logo" style={{ width: 60, height: 60, borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }} />
+                    </Box>
+                    <Typography variant="h4" sx={{ fontWeight: 700, mb: 2 }}>Welcome!</Typography>
+                    <Typography variant="body1" sx={{ opacity: 0.9, mb: 2, textAlign: 'center' }}>
+                        Create your account to get started with PDScreen. Streamline your position descriptions and more.
+                    </Typography>
+                    <Box sx={{ mt: 2, fontSize: 12, opacity: 0.7 }}>© {new Date().getFullYear()} PDScreen</Box>
+                </Box>
+                {/* Right form card */}
+                <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', p: { xs: 2, md: 6 }, background: '#fff', minWidth: 0 }}>
+                    <IconButton
+                        aria-label="close"
+                        onClick={() => navigate(-1)}
+                        sx={{ position: 'absolute', right: 24, top: 24, color: 'grey.500', zIndex: 2 }}
+                    >
+                        <CloseIcon />
+                    </IconButton>
+                    <Typography component="h1" variant="h4" sx={{ fontWeight: 700, mb: 2, textAlign: 'left' }}>
+                        Create your account
+                    </Typography>
+                    <Stepper activeStep={activeStep} sx={{ mt: 1, mb: 3, width: '100%' }}>
+                        {steps.map((label, index) => {
+                            const stepProps: { completed?: boolean } = {};
+                            if (formData.accountType === 'personal' && index === 1) {
+                                return null;
+                            }
+                            return (
+                                <Step key={label} {...stepProps}>
+                                    <StepLabel>{label}</StepLabel>
+                                </Step>
+                            );
+                        })}
+                    </Stepper>
+                    <Box sx={{ width: '100%' }}>
+                        {getStepContent(activeStep, {
+                            showPassword,
+                            setShowPassword,
+                            showConfirmPassword,
+                            setShowConfirmPassword,
+                            loading,
+                            validationErrors,
+                            handleChange,
+                            handleSelectChange,
+                            formData,
+                            passwordValidation,
+                            getPasswordStrengthText,
+                            getPasswordStrengthColor,
+                        })}
+                        {error && (
+                            <Alert severity="error" sx={{ mt: 2, width: '100%' }}>
+                                {error}
+                            </Alert>
                         )}
-                        <Button
-                            variant="contained"
-                            onClick={activeStep === (formData.accountType === 'company' ? steps.length - 1 : 1) ? handleSubmit : handleNext}
-                            disabled={isNextDisabled() || loading}
-                        >
-                            {loading ? <CircularProgress size={24} /> : (activeStep === (formData.accountType === 'company' ? steps.length - 1 : 1) ? 'Finish' : 'Next')}
-                        </Button>
+                        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 3 }}>
+                            {activeStep !== 0 && (
+                                <Button onClick={handleBack} sx={{ mr: 1 }} disabled={loading}>
+                                    Back
+                                </Button>
+                            )}
+                            <Button
+                                variant="contained"
+                                size="large"
+                                onClick={activeStep === (formData.accountType === 'company' ? steps.length - 1 : 1) ? handleSubmit : handleNext}
+                                disabled={isNextDisabled() || loading}
+                                sx={{ minWidth: 120, fontWeight: 600, boxShadow: 1 }}
+                            >
+                                {loading ? <CircularProgress size={24} /> : (activeStep === (formData.accountType === 'company' ? steps.length - 1 : 1) ? 'Sign Up' : 'Next')}
+                            </Button>
+                        </Box>
+                        <Box sx={{ mt: 4, textAlign: 'center' }}>
+                            <MuiLink component={RouterLink} to="/login" underline="hover" sx={{ fontWeight: 500 }}>
+                                Already have an account? Sign in
+                            </MuiLink>
+                        </Box>
                     </Box>
                 </Box>
             </Paper>
-        </Container>
+        </Box>
     );
 };
 

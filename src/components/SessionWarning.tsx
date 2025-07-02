@@ -5,12 +5,14 @@ import {
     Snackbar,
     Box,
     Typography,
+    CircularProgress,
 } from '@mui/material';
 import { useAuth } from '../contexts/AuthContext';
 
 const SessionWarning: React.FC = () => {
-    const { showSessionWarning, sessionTimeout, dismissSessionWarning, logout } = useAuth();
+    const { showSessionWarning, sessionTimeout, dismissSessionWarning, logout, refreshSession } = useAuth();
     const [timeLeft, setTimeLeft] = useState<number>(0);
+    const [isRefreshing, setIsRefreshing] = useState(false);
 
     useEffect(() => {
         if (!showSessionWarning || !sessionTimeout) return;
@@ -33,10 +35,18 @@ const SessionWarning: React.FC = () => {
         return `${minutes}:${seconds.toString().padStart(2, '0')}`;
     };
 
-    const handleExtendSession = () => {
-        // For now, just dismiss the warning
-        // In a real implementation, you would call an API to refresh the token
-        dismissSessionWarning();
+    const handleExtendSession = async () => {
+        try {
+            setIsRefreshing(true);
+            await refreshSession();
+            dismissSessionWarning();
+        } catch (error) {
+            console.error('Failed to extend session:', error);
+            // If refresh fails, we should logout
+            logout();
+        } finally {
+            setIsRefreshing(false);
+        }
     };
 
     const handleLogout = () => {
@@ -54,20 +64,23 @@ const SessionWarning: React.FC = () => {
             <Alert
                 severity="warning"
                 action={
-                    <Box sx={{ display: 'flex', gap: 1 }}>
+                    <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
                         <Button
                             color="inherit"
                             size="small"
                             onClick={handleExtendSession}
                             variant="outlined"
+                            disabled={isRefreshing}
+                            startIcon={isRefreshing ? <CircularProgress size={16} /> : null}
                         >
-                            Stay Logged In
+                            {isRefreshing ? 'Refreshing...' : 'Stay Logged In'}
                         </Button>
                         <Button
                             color="inherit"
                             size="small"
                             onClick={handleLogout}
                             variant="outlined"
+                            disabled={isRefreshing}
                         >
                             Logout
                         </Button>

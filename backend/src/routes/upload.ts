@@ -341,4 +341,45 @@ router.delete('/responsibility/:id', authenticateToken, async (req: Authenticate
     }
 });
 
+// Add this endpoint to allow updating a position description's title and department
+router.put('/:id', authenticateToken, async (req: AuthenticatedRequest, res) => {
+    try {
+        if (!req.user) {
+            return res.status(401).json({ error: 'User not authenticated' });
+        }
+        const { id } = req.params;
+        const companyId = req.user.companyId;
+        const { title, department } = req.body;
+
+        // Only update fields that are provided
+        const fields = [];
+        const values = [];
+        let idx = 1;
+        if (title !== undefined) {
+            fields.push(`title = $${idx++}`);
+            values.push(title);
+        }
+        if (department !== undefined) {
+            fields.push(`department = $${idx++}`);
+            values.push(department);
+        }
+        if (fields.length === 0) {
+            return res.status(400).json({ error: 'No valid fields to update' });
+        }
+        values.push(id, companyId);
+
+        const sql = `UPDATE position_descriptions SET ${fields.join(', ')} WHERE id = $${idx++} AND company_id = $${idx} RETURNING *`;
+        const result = await pool.query(sql, values);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Position description not found' });
+        }
+
+        res.json({ message: 'Position description updated successfully', data: result.rows[0] });
+    } catch (error) {
+        console.error('Error updating position description:', error);
+        res.status(500).json({ error: 'Failed to update position description' });
+    }
+});
+
 export default router; 

@@ -4,6 +4,9 @@ import dotenv from 'dotenv';
 import { pool, initializeDatabase } from './db/init';
 import uploadRouter from './routes/upload';
 import authRouter from './routes/auth';
+import dashboardRouter from './routes/dashboard';
+import adminRouter from './routes/admin';
+import systemAdminRouter from './routes/system-admin';
 import fs from 'fs';
 
 dotenv.config();
@@ -26,6 +29,9 @@ initializeDatabase().catch(console.error);
 // Routes
 app.use('/api/upload', uploadRouter);
 app.use('/api/auth', authRouter);
+app.use('/api/dashboard', dashboardRouter);
+app.use('/api/admin', adminRouter);
+app.use('/api/system-admin', systemAdminRouter);
 
 // Get content by key
 app.get('/api/content/:key', async (req, res) => {

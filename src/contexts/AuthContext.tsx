@@ -1,11 +1,15 @@
 import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
 import { jwtDecode } from 'jwt-decode';
-import apiService from '../services/api';
+import apiService, { refreshToken } from '../services/api';
+
+interface RefreshTokenResponse {
+    accessToken: string;
+}
 
 interface User {
-    userId: string;
+    id: number;
     email: string;
-    companyId: string;
+    companyId: number;
     accountType: string;
     firstName?: string;
     lastName?: string;
@@ -22,6 +26,7 @@ interface AuthContextType {
     sessionTimeout: number | null;
     showSessionWarning: boolean;
     dismissSessionWarning: () => void;
+    refreshSession: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -164,6 +169,32 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setShowSessionWarning(false);
     };
 
+    const refreshSession = async () => {
+        try {
+            const { accessToken } = await refreshToken() as RefreshTokenResponse;
+            if (accessToken) {
+                login(accessToken);
+                // Reset session warning state
+                setShowSessionWarning(false);
+                setSessionTimeout(null);
+                
+                // Check if new token is expiring soon
+                const decoded = jwtDecode<User>(accessToken);
+                const currentTime = Date.now();
+                const tokenExpiry = decoded.exp * 1000;
+                const timeUntilExpiry = tokenExpiry - currentTime;
+                
+                if (timeUntilExpiry <= SESSION_WARNING_THRESHOLD) {
+                    setSessionTimeout(tokenExpiry);
+                    setShowSessionWarning(true);
+                }
+            }
+        } catch (error) {
+            console.error("Failed to refresh token:", error);
+            handleLogout();
+        }
+    };
+
     return (
         <AuthContext.Provider value={{ 
             isAuthenticated: !loading && !!user, 
@@ -174,7 +205,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             register,
             sessionTimeout,
             showSessionWarning,
-            dismissSessionWarning
+            dismissSessionWarning,
+            refreshSession
         }}>
             {children}
         </AuthContext.Provider>

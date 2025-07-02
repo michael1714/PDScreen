@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { pool } from '../db/init';
 import { body, validationResult } from 'express-validator';
+import { authenticateToken, AuthenticatedRequest } from '../middleware/auth';
 
 const router = express.Router();
 
@@ -159,5 +160,15 @@ router.post(
         }
     }
 );
+
+// Refresh token endpoint
+router.post('/refresh', authenticateToken, (req: AuthenticatedRequest, res) => {
+  // Issue a new JWT with a fresh expiry for the current user
+  const payload = { user: req.user };
+  const accessToken = jwt.sign(payload, process.env.JWT_SECRET || 'your_default_secret', {
+    expiresIn: '1h', // or your preferred expiry
+  });
+  res.json({ accessToken });
+});
 
 export default router; 

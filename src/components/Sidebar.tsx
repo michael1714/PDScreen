@@ -11,6 +11,7 @@ import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import LogoutIcon from '@mui/icons-material/Logout';
 import ExpandLess from '@mui/icons-material/ExpandLess';
 import ExpandMore from '@mui/icons-material/ExpandMore';
+import BuildIcon from '@mui/icons-material/Build';
 import { useAuth } from '../contexts/AuthContext';
 import { NavLink } from 'react-router-dom';
 import { Typography } from '@mui/material';
@@ -21,8 +22,16 @@ const drawerWidth = 220;
 const Sidebar: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
   const [descOpen, setDescOpen] = React.useState(() => ['/upload', '/branding-wizard'].includes(location.pathname));
+
+  // Show System Admin if user exists and has ID 1
+  const showSystemAdmin = user && (
+    user.id === 1 || 
+    (user as any).id === 1 ||
+    JSON.stringify(user).includes('"id":1') ||
+    JSON.stringify(user).includes('"id":"1"')
+  );
 
   return (
     <Drawer
@@ -91,11 +100,15 @@ const Sidebar: React.FC = () => {
         <Box sx={{ flexGrow: 1 }} />
         <Divider />
         <List>
-          <ListItem disablePadding>
-            <ListItemButton selected={location.pathname === '/admin'} onClick={() => navigate('/admin')}>
-              <ListItemIcon><AdminPanelSettingsIcon /></ListItemIcon>
-              <ListItemText primary="Admin" />
-            </ListItemButton>
+          {showSystemAdmin && (
+            <ListItem button component={NavLink} to="/system-admin">
+              <ListItemIcon><BuildIcon /></ListItemIcon>
+              <ListItemText primary="System Admin" />
+            </ListItem>
+          )}
+          <ListItem button component={NavLink} to="/admin">
+            <ListItemIcon><AdminPanelSettingsIcon /></ListItemIcon>
+            <ListItemText primary="Admin" />
           </ListItem>
           <ListItem disablePadding>
             <ListItemButton onClick={logout}>
