@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Toolbar, Paper, Breadcrumbs, Typography, Link as MuiLink, Tabs, Tab } from '@mui/material';
+import { Box, Toolbar, Paper, Breadcrumbs, Typography, Link as MuiLink } from '@mui/material';
 import Sidebar from './Sidebar';
 import AppHeader from './AppHeader';
 import Footer from './Footer';
@@ -9,9 +9,8 @@ const drawerWidth = 220;
 const MainLayout: React.FC<{
   children: React.ReactNode,
   pageTitle?: string,
-  toolbarContent?: React.ReactNode,
   tabs?: React.ReactNode
-}> = ({ children, pageTitle, toolbarContent, tabs }) => {
+}> = ({ children, pageTitle, tabs }) => {
   return (
     <Box sx={{ minHeight: '100vh', background: '#fff' }}>
       <Sidebar />

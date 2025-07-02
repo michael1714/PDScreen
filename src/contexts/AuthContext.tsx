@@ -159,10 +159,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const register = async (userData: any) => {
         // The backend /register endpoint should return the user and a token
         const response = await apiService.post('/auth/register', userData);
-        if (response.data && response.data.accessToken) {
-            login(response.data.accessToken);
+        const data = response.data as any;
+        if (data && data.token) {
+            login(data.token);
         }
-        return response.data;
+        return data;
     };
 
     const dismissSessionWarning = () => {
@@ -171,15 +172,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const refreshSession = async () => {
         try {
-            const { accessToken } = await refreshToken() as RefreshTokenResponse;
-            if (accessToken) {
-                login(accessToken);
+            const response: RefreshTokenResponse = await refreshToken();
+            if (response.accessToken) {
+                login(response.accessToken);
                 // Reset session warning state
                 setShowSessionWarning(false);
                 setSessionTimeout(null);
                 
                 // Check if new token is expiring soon
-                const decoded = jwtDecode<User>(accessToken);
+                const decoded = jwtDecode<User>(response.accessToken);
                 const currentTime = Date.now();
                 const tokenExpiry = decoded.exp * 1000;
                 const timeUntilExpiry = tokenExpiry - currentTime;

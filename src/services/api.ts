@@ -30,9 +30,7 @@ interface CompanyInfoBlock {
   updated_by: number;
 }
 
-interface RefreshTokenResponse {
-  accessToken: string;
-}
+// Removed unused RefreshTokenResponse interface
 
 interface CompanyDetails {
   name: string;

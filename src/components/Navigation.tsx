@@ -15,18 +15,12 @@ import {
   ListItemButton, 
   Box,
   Menu,
-  MenuItem,
-  Avatar
+  MenuItem
 } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import AccountCircle from '@mui/icons-material/AccountCircle';
 import { useAuth } from '../contexts/AuthContext';
-import { Link as RouterLink } from 'react-router-dom';
-import {
-  Description as DescriptionIcon,
-  CloudUpload as CloudUploadIcon,
-  AutoAwesome as AutoAwesomeIcon,
-} from '@mui/icons-material';
+// Removed unused imports
 
 const Navigation: React.FC = () => {
   const { isAuthenticated, logout, user } = useAuth();

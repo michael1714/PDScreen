@@ -100,12 +100,7 @@ const PositionDescriptionUpload: React.FC = () => {
 
         try {
             await apiService.post('/upload', formData, {
-                headers: { 'Content-Type': 'multipart/form-data' },
-                onUploadProgress: (event: ProgressEvent) => {
-                    if (event.lengthComputable) {
-                        setProgress(Math.round((event.loaded / event.total) * 100));
-                    }
-                }
+                headers: { 'Content-Type': 'multipart/form-data' }
             });
             setSuccess('File uploaded successfully! Redirecting to list...');
             setTitle('');

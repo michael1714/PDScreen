@@ -72,8 +72,9 @@ const LoginPage: React.FC = () => {
 
         try {
             const response = await apiService.post('/auth/login', { email, password });
-            if (response.data && response.data.accessToken) {
-                login(response.data.accessToken);
+            const data = response.data as any;
+            if (data && data.token) {
+                login(data.token);
                 
                 // Handle remember me functionality
                 if (rememberMe) {

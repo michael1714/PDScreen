@@ -14,7 +14,6 @@ import AdminPage from './components/AdminPage';
 import SystemAdminPage from './pages/SystemAdminPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import SessionWarning from './components/SessionWarning';
-import Navigation from './components/Navigation';
 import MainLayout from './components/MainLayout';
 import Dashboard from './pages/Dashboard';
 import CompanyDetailsPage from './pages/CompanyDetailsPage';
@@ -34,9 +33,8 @@ const theme = createTheme({
 });
 
 const AppContent: React.FC = () => {
-  const { isAuthenticated, loading } = useAuth();
+  const { loading } = useAuth();
   const location = useLocation();
-  const shouldShowNav = false;
   const isLandingTypePage = ['/', '/login', '/register', '/welcome'].includes(location.pathname);
 
   if (loading) {
