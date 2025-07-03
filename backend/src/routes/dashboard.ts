@@ -120,7 +120,7 @@ router.get('/', authenticateToken, async (req: AuthenticatedRequest, res) => {
              LIMIT 5`,
             [companyId]
         );
-        const topRoles = topRolesResult.rows.map(row => ({
+        const topRoles = topRolesResult.rows.map((row: any) => ({
             role: row.title,
             score: `${Math.round(parseFloat(row.ai_automation_score_sum) * 100)}%`
         }));
@@ -134,7 +134,7 @@ router.get('/', authenticateToken, async (req: AuthenticatedRequest, res) => {
              LIMIT 5`,
             [companyId]
         );
-        const recentUploads = recentUploadsResult.rows.map(row => ({
+        const recentUploads = recentUploadsResult.rows.map((row: any) => ({
             title: row.title,
             date: new Date(row.upload_date).toISOString().split('T')[0]
         }));
