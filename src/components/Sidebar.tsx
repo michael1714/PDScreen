@@ -44,12 +44,6 @@ const Sidebar: React.FC = () => {
     >
       <Toolbar />
       <Box sx={{ overflow: 'auto', display: 'flex', flexDirection: 'column', height: '100%' }}>
-        <Box sx={{ p: 2, display: 'flex', alignItems: 'center' }}>
-          <Typography variant="h6" fontWeight={700} color="primary">
-            PDScreen
-          </Typography>
-        </Box>
-        <Divider />
         <List>
           <ListItem button component={NavLink} to="/dashboard">
             <ListItemIcon>
