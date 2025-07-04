@@ -205,7 +205,7 @@ const PositionDescriptionList: React.FC = () => {
     };
 
     useEffect(() => {
-        if (dialogOpen && tabIndex === 1 && selectedDescription) {
+        if (dialogOpen && (tabIndex === 1 || tabIndex === 2) && selectedDescription) {
             setRespLoading(true);
             apiService.get<any[]>(`/upload/${selectedDescription.id}/responsibilities`)
                 .then((response: { data: any[] }) => {
@@ -997,7 +997,7 @@ ${responsibilities.map(resp => `    <responsibility>
                         </Box>
                     )}
                             
-                            {/* AI Assessment Tab */}
+                                                        {/* AI Assessment Tab */}
                             {tabIndex === 2 && (
                                 <Box sx={{ p: 2 }}>
                                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
