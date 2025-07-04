@@ -388,13 +388,15 @@ const PositionDescriptionList: React.FC = () => {
     const handleLlmConfirm = async () => {
         if (!llmConfirmOpen.resp) return;
         const respId = llmConfirmOpen.resp.id;
+        const originalLLMDesc = llmConfirmOpen.resp.LLM_Desc; // Save original description for comparison
+        const responsibilityName = llmConfirmOpen.resp.responsibility_name; // Save responsibility name
         setLlmConfirmOpen({ open: false, resp: null });
         try {
             // Call Make.com webhook directly
             await axios.post('https://hook.eu2.make.com/wpuyuxytd4l1cjm0wq21gkso88mabx25', {
                 Row: respId,
-                ResponsibilityName: llmConfirmOpen.resp.responsibility_name,
-                CurrentLLMDesc: llmConfirmOpen.resp.LLM_Desc || ''
+                ResponsibilityName: responsibilityName,
+                CurrentLLMDesc: originalLLMDesc || ''
             });
             // Start polling for the updated LLM_Desc
             let elapsed = 0;
@@ -404,9 +406,10 @@ const PositionDescriptionList: React.FC = () => {
                 if (!res.data.length) return;
                 const data = res.data;
                 const updated = data.find((r: any) => r.id === respId);
-                if (updated && updated.LLM_Desc && updated.LLM_Desc !== llmConfirmOpen.resp.LLM_Desc) {
+                if (updated && updated.LLM_Desc && updated.LLM_Desc !== originalLLMDesc) {
                     // Found update, stop polling and update UI
                     setResponsibilities((prev) => prev.map((r) => (r.id === respId ? { ...r, LLM_Desc: updated.LLM_Desc } : r)));
+                    setError(null); // Clear any previous errors
                 } else if (elapsed < POLL_TIMEOUT_MS) {
                     // Continue polling
                     elapsed += POLL_INTERVAL_MS;

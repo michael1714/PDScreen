@@ -59,23 +59,44 @@ app.get('/api/content/:key', async (req, res) => {
 
 // Webhook endpoint with secret header validation
 app.post('/webhook', async (req, res) => {
+  // Debug logging
+  console.log('Webhook received:');
+  console.log('Headers:', req.headers);
+  console.log('Body:', req.body);
+  
   const secret = req.headers['x-webhook-secret'];
   if (secret !== process.env.WEBHOOK_SECRET) {
+    console.log('Webhook secret mismatch. Expected:', process.env.WEBHOOK_SECRET, 'Received:', secret);
     return res.status(401).send('Unauthorized');
   }
   try {
-    const { Row, LLMDesc } = req.body;
-    if (!Row || !LLMDesc) {
-      return res.status(400).json({ error: 'Missing Row (id) or LLMDesc in request body' });
+    const { Row, LLMDesc, row, llmDesc, responsibilityId, description } = req.body;
+    
+    // Handle different possible field names from Make.com
+    const responsibilityIdValue = Row || row || responsibilityId;
+    const llmDescValue = LLMDesc || llmDesc || description;
+    
+    if (!responsibilityIdValue || !llmDescValue) {
+      console.log('Missing required fields. Available fields:', Object.keys(req.body));
+      return res.status(400).json({ 
+        error: 'Missing responsibility ID or LLM description in request body',
+        receivedFields: Object.keys(req.body)
+      });
     }
+    
+    console.log('Updating responsibility ID:', responsibilityIdValue, 'with description:', llmDescValue);
+    
     // Update the LLM_Desc field for the given responsibility id
     const result = await pool.query(
       'UPDATE responsibilities SET "LLM_Desc" = $1 WHERE id = $2 RETURNING *',
-      [LLMDesc, Row]
+      [llmDescValue, responsibilityIdValue]
     );
     if (result.rowCount === 0) {
+      console.log('Responsibility not found for ID:', responsibilityIdValue);
       return res.status(404).json({ error: 'Responsibility not found' });
     }
+    
+    console.log('Successfully updated responsibility:', result.rows[0]);
     res.json({ message: 'LLM_Desc updated successfully', data: result.rows[0] });
   } catch (error) {
     console.error('Webhook upsert error:', error);
