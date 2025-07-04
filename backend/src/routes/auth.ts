@@ -93,7 +93,14 @@ router.post(
                     expiresIn: '1h',
                 });
 
-                res.status(201).json({ accessToken });
+                res.status(201).json({ 
+                    token: accessToken,
+                    user: {
+                        id: newUser.id,
+                        email: newUser.email,
+                        role: newUser.role
+                    }
+                });
 
             } catch (error) {
                 await client.query('ROLLBACK');
@@ -152,7 +159,14 @@ router.post(
                 expiresIn: '1h', // Token expires in 1 hour
             });
 
-            res.json({ accessToken });
+            res.json({ 
+                token: accessToken,
+                user: {
+                    id: user.id,
+                    email: user.email,
+                    role: user.role
+                }
+            });
 
         } catch (error) {
             console.error('Login error:', error);
