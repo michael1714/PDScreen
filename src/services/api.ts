@@ -45,7 +45,7 @@ interface CompanyDetails {
 }
 
 const apiService = axios.create({
-    baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3000/api',
+    baseURL: import.meta.env.VITE_API_URL || '/api',
     headers: {
         'Content-Type': 'application/json',
     },
@@ -189,7 +189,7 @@ export const getEditorConfig = async (): Promise<{ apiKey: string }> => {
 // Get TinyMCE API key
 export const getTinyMCEKey = async (): Promise<string> => {
   try {
-    const response = await axios.get<{ value: string }>(`${API_BASE_URL}/dashboard/editor-key`);
+    const response = await apiService.get<{ value: string }>('/dashboard/editor-key');
     return response.data.value;
   } catch (error) {
     console.error('Error fetching TinyMCE API key:', error);
