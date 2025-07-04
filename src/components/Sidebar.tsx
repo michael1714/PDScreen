@@ -43,7 +43,7 @@ const Sidebar: React.FC = () => {
       }}
     >
       <Toolbar />
-      <Box sx={{ overflow: 'auto', display: 'flex', flexDirection: 'column', height: '100%' }}>
+      <Box sx={{ overflow: 'auto', display: 'flex', flexDirection: 'column', height: '100%', pt: '30px' }}>
         <List>
           <ListItem button component={NavLink} to="/dashboard">
             <ListItemIcon>
