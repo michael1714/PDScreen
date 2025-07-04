@@ -47,6 +47,7 @@ import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import AddIcon from '@mui/icons-material/Add';
 import { useAuth } from '../contexts/AuthContext';
 import apiService from '../services/api';
+import axios from 'axios';
 
 interface PositionDescription {
     id: number;
@@ -389,10 +390,11 @@ const PositionDescriptionList: React.FC = () => {
         const respId = llmConfirmOpen.resp.id;
         setLlmConfirmOpen({ open: false, resp: null });
         try {
-            await apiService.post('/hook', {
-                id: respId,
-                description: llmConfirmOpen.resp.responsibility_name,
-                llm_description: llmConfirmOpen.resp.LLM_Desc
+            // Call Make.com webhook directly
+            await axios.post('https://hook.eu2.make.com/wpuyuxytd4l1cjm0wq21gkso88mabx25', {
+                Row: respId,
+                ResponsibilityName: llmConfirmOpen.resp.responsibility_name,
+                CurrentLLMDesc: llmConfirmOpen.resp.LLM_Desc || ''
             });
             // Start polling for the updated LLM_Desc
             let elapsed = 0;
