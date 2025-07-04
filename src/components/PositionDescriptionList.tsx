@@ -33,6 +33,7 @@ import {
     InputLabel,
     Grid,
     Chip,
+    Checkbox,
 } from '@mui/material';
 import DownloadIcon from '@mui/icons-material/Download';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -87,6 +88,12 @@ const PositionDescriptionList: React.FC = () => {
     const [editingDescValue, setEditingDescValue] = useState<string>('');
     const [descSaving, setDescSaving] = useState<{ [id: number]: boolean }>({});
     const [editingDescType, setEditingDescType] = useState<'original' | 'llm'>('original');
+    const [editDialogOpen, setEditDialogOpen] = useState(false);
+    const [editingResp, setEditingResp] = useState<any | null>(null);
+    const [editTempValue, setEditTempValue] = useState('');
+    const [aiAssessmentData, setAiAssessmentData] = useState<any[]>([]);
+    const [xmlDialogOpen, setXmlDialogOpen] = useState(false);
+    const [xmlData, setXmlData] = useState('');
     const [departmentFilter, setDepartmentFilter] = useState('');
     const [sortBy, setSortBy] = useState('date');
     const [sortOrder, setSortOrder] = useState('desc');
@@ -502,6 +509,71 @@ const PositionDescriptionList: React.FC = () => {
         }
     };
 
+    // New edit dialog handlers
+    const handleEditClick = (resp: any) => {
+        setEditingResp(resp);
+        setEditTempValue(resp.responsibility_name);
+        setEditDialogOpen(true);
+    };
+
+    const handleEditSave = async () => {
+        if (!editingResp) return;
+        try {
+            await apiService.put(`/upload/responsibility/${editingResp.id}`, {
+                responsibility_name: editTempValue
+            });
+            // Refresh responsibilities
+            if (selectedDescription) {
+                const response = await apiService.get<any[]>(`/upload/${selectedDescription.id}/responsibilities`);
+                setResponsibilities(response.data);
+                setOriginalResponsibilities(response.data.map((r: any) => ({ ...r })));
+            }
+            setEditDialogOpen(false);
+            setEditingResp(null);
+            setEditTempValue('');
+        } catch (error) {
+            setError('Failed to update responsibility');
+        }
+    };
+
+    const handleEditCancel = () => {
+        setEditDialogOpen(false);
+        setEditingResp(null);
+        setEditTempValue('');
+    };
+
+    // AI Assessment handlers
+    const handleCheckboxChange = (respId: number, checked: boolean) => {
+        setResponsibilities(prev => 
+            prev.map(r => r.id === respId ? { ...r, selected: checked } : r)
+        );
+    };
+
+    const handleToggleDescription = (respId: number, showLLM: boolean) => {
+        setResponsibilities(prev => 
+            prev.map(r => r.id === respId ? { ...r, showLLM } : r)
+        );
+    };
+
+    const generateXMLData = () => {
+        const xmlContent = `<?xml version="1.0" encoding="UTF-8"?>
+<responsibilities>
+${responsibilities.map(resp => `    <responsibility>
+        <id>${resp.id}</id>
+        <name><![CDATA[${resp.responsibility_name}]]></name>
+        <percentage>${resp.responsibility_percentage}</percentage>
+        <ai_percentage>${resp.ai_automation_percentage || 'N/A'}</ai_percentage>
+        <llm_description><![CDATA[${resp.LLM_Desc || ''}]]></llm_description>
+        <ai_automation_reason><![CDATA[${resp.ai_automation_reason || ''}]]></ai_automation_reason>
+        <selected>${resp.selected || false}</selected>
+        <showing_llm>${resp.showLLM || false}</showing_llm>
+    </responsibility>`).join('\n')}
+</responsibilities>`;
+        
+        setXmlData(xmlContent);
+        setXmlDialogOpen(true);
+    };
+
     const filteredAndSortedDescriptions = useMemo(() => {
         let sorted = [...descriptions];
 
@@ -752,6 +824,7 @@ const PositionDescriptionList: React.FC = () => {
                             >
                                 <Tab label="File Preview" sx={{ minHeight: 0, py: 1 }} />
                                 <Tab label={`Responsibilities (${responsibilitiesCount})`} sx={{ minHeight: 0, py: 1 }} />
+                                <Tab label="AI Assessment" sx={{ minHeight: 0, py: 1 }} />
                                 <Tab label="Edit" sx={{ minHeight: 0, py: 1 }} />
                     </Tabs>
                             
@@ -876,14 +949,26 @@ const PositionDescriptionList: React.FC = () => {
                                                             sx={{ flex: 1, mx: 1 }}
                                                             size="small"
                                                         />
-                                                        <IconButton
-                                                            size="small"
-                                                            onClick={() => handleLlmIconClick(resp)}
-                                                            color="primary"
-                                                            sx={{ mx: 0.5 }}
-                                                        >
-                                                            <AutoFixHighIcon fontSize="small" />
-                                                        </IconButton>
+                                                        <Tooltip title="Edit responsibility">
+                                                            <IconButton
+                                                                size="small"
+                                                                onClick={() => handleEditClick(resp)}
+                                                                color="info"
+                                                                sx={{ mx: 0.5 }}
+                                                            >
+                                                                <EditIcon fontSize="small" />
+                                                            </IconButton>
+                                                        </Tooltip>
+                                                        <Tooltip title="Use AI to rewrite this responsibility">
+                                                            <IconButton
+                                                                size="small"
+                                                                onClick={() => handleLlmIconClick(resp)}
+                                                                color="primary"
+                                                                sx={{ mx: 0.5 }}
+                                                            >
+                                                                <AutoFixHighIcon fontSize="small" />
+                                                            </IconButton>
+                                                        </Tooltip>
                                                         <IconButton
                                                             size="small"
                                                             onClick={() => handleRemoveClick(resp.id)}
@@ -912,8 +997,67 @@ const PositionDescriptionList: React.FC = () => {
                         </Box>
                     )}
                             
+                            {/* AI Assessment Tab */}
+                            {tabIndex === 2 && (
+                                <Box sx={{ p: 2 }}>
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                                        <Typography variant="h6">AI Assessment</Typography>
+                                        <Button
+                                            variant="outlined"
+                                            onClick={() => generateXMLData()}
+                                            sx={{ borderRadius: 2 }}
+                                        >
+                                            Export XML
+                                        </Button>
+                                    </Box>
+                                    {responsibilities.map((resp, index) => (
+                                        <Paper key={resp.id} sx={{ p: 2, mb: 1, borderRadius: 1 }}>
+                                            <Grid container spacing={2} alignItems="center">
+                                                <Grid item xs={1}>
+                                                    <Checkbox
+                                                        checked={resp.selected || false}
+                                                        onChange={(e) => handleCheckboxChange(resp.id, e.target.checked)}
+                                                    />
+                                                </Grid>
+                                                <Grid item xs={4}>
+                                                    <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
+                                                        {resp.responsibility_name}
+                                                    </Typography>
+                                                    <Typography variant="body2" color="text.secondary" sx={{ fontSize: 13 }}>
+                                                        {resp.showLLM ? (resp.LLM_Desc || 'No AI description available') : resp.responsibility_name}
+                                                    </Typography>
+                                                </Grid>
+                                                <Grid item xs={2}>
+                                                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                                                        Responsibility: {resp.responsibility_percentage}%
+                                                    </Typography>
+                                                </Grid>
+                                                <Grid item xs={2}>
+                                                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                                                        AI Score: {resp.ai_automation_percentage || 'N/A'}%
+                                                    </Typography>
+                                                </Grid>
+                                                <Grid item xs={3}>
+                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                        <Typography variant="body2" sx={{ minWidth: 80 }}>
+                                                            {resp.showLLM ? 'AI Description' : 'Original'}
+                                                        </Typography>
+                                                        <Switch
+                                                            checked={!!resp.showLLM}
+                                                            onChange={(e) => handleToggleDescription(resp.id, e.target.checked)}
+                                                            color="primary"
+                                                            size="small"
+                                                        />
+                                                    </Box>
+                                                </Grid>
+                                            </Grid>
+                                        </Paper>
+                                    ))}
+                                </Box>
+                            )}
+                            
                             {/* Edit Tab */}
-                            {tabIndex === 2 && selectedDescription && (
+                            {tabIndex === 3 && selectedDescription && (
                                 <Box sx={{ p: 3, maxWidth: 400 }}>
                                     <EditPDForm 
                                         pd={selectedDescription} 
@@ -1015,6 +1159,67 @@ const PositionDescriptionList: React.FC = () => {
                     </Button>
                     <Button onClick={handleSavePromptYes} variant="contained" color="primary">
                         Save
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Edit Responsibility Dialog */}
+            <Dialog open={editDialogOpen} onClose={handleEditCancel} maxWidth="sm" fullWidth>
+                <DialogTitle>Edit Responsibility</DialogTitle>
+                <DialogContent>
+                    <TextField
+                        autoFocus
+                        margin="dense"
+                        label="Responsibility Description"
+                        fullWidth
+                        variant="outlined"
+                        multiline
+                        rows={3}
+                        value={editTempValue}
+                        onChange={(e) => setEditTempValue(e.target.value)}
+                    />
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={handleEditCancel} color="inherit">
+                        Cancel
+                    </Button>
+                    <Button 
+                        onClick={handleEditSave} 
+                        variant="contained"
+                        disabled={!editTempValue.trim()}
+                    >
+                        Save
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* XML Export Dialog */}
+            <Dialog open={xmlDialogOpen} onClose={() => setXmlDialogOpen(false)} maxWidth="md" fullWidth>
+                <DialogTitle>XML Export - Responsibilities Data</DialogTitle>
+                <DialogContent>
+                    <TextField
+                        multiline
+                        rows={15}
+                        fullWidth
+                        variant="outlined"
+                        value={xmlData}
+                        InputProps={{
+                            readOnly: true,
+                            sx: { fontFamily: 'monospace', fontSize: 12 }
+                        }}
+                    />
+                </DialogContent>
+                <DialogActions>
+                    <Button 
+                        onClick={() => {
+                            navigator.clipboard.writeText(xmlData);
+                        }}
+                        variant="outlined"
+                    >
+                        Copy to Clipboard
+                    </Button>
+                    <Button onClick={() => setXmlDialogOpen(false)} variant="contained">
+                        Close
                     </Button>
                 </DialogActions>
             </Dialog>
